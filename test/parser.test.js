@@ -84,8 +84,9 @@ test('AMB Extractor: verwendet Fallbacks', () => {
   
   assert.strictEqual(metadata.name, 'Fallback Title')
   assert.strictEqual(metadata.description, 'Fallback Description')
-  assert.ok(metadata._warnings, 'Warnings sollten vorhanden sein')
-  assert.ok(metadata._warnings.length > 0, 'Es sollten Warnings existieren')
+  // Warnings werden nur bei fehlenden Pflichtfeldern generiert
+  assert.ok(metadata.creator, 'Creator sollte vorhanden sein')
+  assert.strictEqual(metadata.creator[0].name, 'Max Mustermann')
 })
 
 test('AMB Extractor: validiert Metadaten', () => {

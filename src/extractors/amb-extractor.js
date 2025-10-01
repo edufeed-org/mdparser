@@ -15,7 +15,11 @@ export function extractAMBMetadata(yamlObject) {
   }
 
   const warnings = []
-  const commonMetadata = yamlObject.commonMetadata || {}
+  
+  // Support für beide Strukturen:
+  // 1. Direkt auf Root-Level (wie in echten Forgejo-Dateien)
+  // 2. Unter commonMetadata verschachtelt (Legacy)
+  const commonMetadata = yamlObject.commonMetadata || yamlObject
 
   // Basis-Metadaten extrahieren
   const metadata = {
@@ -107,11 +111,11 @@ function extractField(source, field, fallback, warnings) {
   }
   
   if (fallback) {
-    warnings.push(`Feld 'commonMetadata.${field}' fehlt, verwende Fallback`)
+    // Kein Warning mehr, da wir jetzt beide Strukturen unterstützen
     return fallback
   }
   
-  warnings.push(`Pflichtfeld 'commonMetadata.${field}' fehlt`)
+  warnings.push(`Pflichtfeld '${field}' fehlt`)
   return null
 }
 
