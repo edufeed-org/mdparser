@@ -33,6 +33,9 @@ export {
   createForgejoClient
 } from './forgejo-client.js'
 
+// Für parse() Funktion
+import { parseMarkdownFile as _parseMarkdownFile, parseMarkdownString as _parseMarkdownString } from './parser.js'
+
 /**
  * Convenience-Funktion: Parst Markdown von verschiedenen Quellen
  * @param {string} source - Dateipfad, URL oder Markdown-String
@@ -40,31 +43,18 @@ export {
  * @returns {Promise<Object>} Parsed result
  */
 export async function parse(source, options = {}) {
-  const { parseMarkdownFile, parseMarkdownString } = await import('./parser.js')
-  
   // Prüfe ob es ein Dateipfad ist
   if (source.startsWith('/') || source.startsWith('./') || source.startsWith('../')) {
-    return parseMarkdownFile(source, options)
+    return _parseMarkdownFile(source, options)
   }
   
   // Prüfe ob es eine URL ist
   if (source.startsWith('http://') || source.startsWith('https://')) {
     const response = await fetch(source)
     const markdown = await response.text()
-    return parseMarkdownString(markdown, options)
+    return _parseMarkdownString(markdown, options)
   }
   
   // Ansonsten als Markdown-String behandeln
-  return parseMarkdownString(source, options)
-}
-
-// Default Export
-export default {
-  parse,
-  parseMarkdownFile,
-  parseMarkdownString,
-  ForgejoClient,
-  createForgejoClient,
-  extractYAML,
-  extractAMBMetadata
+  return _parseMarkdownString(source, options)
 }
