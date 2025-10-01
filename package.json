@@ -1,0 +1,50 @@
+{
+  "name": "mdparser",
+  "version": "0.1.0",
+  "description": "Markdown Parser für AMB-konforme Inhalte mit YAML Front Matter - optimiert für Forgejo/Gitea API und Transformation zu WordPress/Nostr",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test",
+    "lint": "eslint src/",
+    "format": "prettier --write 'src/**/*.js'",
+    "example": "node examples/parse-forgejo.js"
+  },
+  "keywords": [
+    "markdown",
+    "parser",
+    "yaml",
+    "frontmatter",
+    "AMB",
+    "schema.org",
+    "forgejo",
+    "gitea",
+    "wordpress",
+    "nostr",
+    "oer",
+    "education"
+  ],
+  "author": "Jörg Lohrer",
+  "license": "MIT",
+  "dependencies": {
+    "unified": "^11.0.5",
+    "remark-parse": "^11.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.0",
+    "yaml": "^2.4.5",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "eslint": "^9.9.0",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://git.rpi-virtuell.de/Comenius-Institut/mdparser.git"
+  }
+}
