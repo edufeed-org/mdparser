@@ -135,11 +135,12 @@ export class ForgejoClient {
   }
 
   /**
-   * Listet alle Posts aus dem Posts-Verzeichnis
-   * @param {string} postsDir - Pfad zum Posts-Verzeichnis
+   * Listet alle Posts auf
+   * @param {string} language - Sprache (default: 'de')
    * @returns {Promise<Array>} Array von Post-Verzeichnissen
    */
-  async listPosts(postsDir = 'Website/content/posts') {
+  async listPosts(language = 'de') {
+    const postsDir = `Website/content/${language}/posts`
     try {
       const contents = await this.listDirectory(postsDir)
       
@@ -154,31 +155,32 @@ export class ForgejoClient {
 
   /**
    * Ruft index.md aus einem Post-Verzeichnis ab
-   * @param {string} postDir - Post-Verzeichnis (z.B. "2025-04-20-OER-und-Symbole")
-   * @param {string} postsBaseDir - Basis-Pfad (default: "Website/content/posts")
+   * @param {string} postName - Post-Verzeichnis (z.B. "2025-04-20-OER-und-Symbole")
+   * @param {string} language - Sprache (default: 'de')
    * @returns {Promise<string>} Markdown-Content
    */
-  async getPostContent(postDir, postsBaseDir = 'Website/content/posts') {
-    const indexPath = `${postsBaseDir}/${postDir}/index.md`
+  async getPostContent(postName, language = 'de') {
+    const postsBaseDir = `Website/content/${language}/posts`
+    const indexPath = `${postsBaseDir}/${postName}/index.md`
     return await this.getFileContent(indexPath)
   }
 
   /**
    * Ruft alle Posts mit Content ab
-   * @param {string} postsDir - Posts-Verzeichnis
+   * @param {string} language - Sprache (default: 'de')
    * @returns {Promise<Array>} Array von Posts mit Content
    */
-  async getAllPosts(postsDir = 'Website/content/posts') {
+  async getAllPosts(language = 'de') {
     try {
-      const postDirs = await this.listPosts(postsDir)
+      const postDirs = await this.listPosts(language)
       
       const posts = await Promise.all(
         postDirs.map(async (dir) => {
           try {
-            const content = await this.getPostContent(dir.name, postsDir)
+            const content = await this.getPostContent(dir.name, language)
             return {
               directory: dir.name,
-              path: `${postsDir}/${dir.name}/index.md`,
+              path: `Website/content/${language}/posts/${dir.name}/index.md`,
               content,
               metadata: dir
             }

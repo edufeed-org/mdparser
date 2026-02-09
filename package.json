@@ -10,7 +10,9 @@
     "test": "node --test",
     "lint": "eslint src/",
     "format": "prettier --write 'src/**/*.js'",
-    "example": "node examples/parse-forgejo.js"
+    "example": "node examples/parse-forgejo.js",
+    "dashboard": "node dashboard.js",
+    "web": "node web-dashboard.js"
   },
   "keywords": [
     "markdown",

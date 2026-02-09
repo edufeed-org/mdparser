@@ -10,8 +10,9 @@ Ein modularer Parser für Markdown-Dateien mit YAML Front Matter, optimiert für
 - ✅ **AST-basiert** - Strukturierte Markdown-Verarbeitung mit unified/remark
 - ✅ **Isomorph** - Funktioniert in Node.js und im Browser
 - ✅ **Erweiterbar** - Modulare Architektur für Custom-Transformationen
-- 🚧 **WordPress REST API v2** - Transformer (geplant)
-- 🚧 **Nostr NIP-23** - Long-form Content Transformer (geplant)
+- ✅ **WordPress REST API v2** - Transformer für WordPress-Publishing
+- ✅ **Nostr NIP-23** - Long-form Content Transformer für Nostr-Relays
+- ✅ **Dashboard** - Terminal & Web-Dashboard für Monitoring
 
 ## 📦 Installation
 
@@ -52,19 +53,27 @@ mdparser/
 │   ├── extractors/
 │   │   ├── yaml-extractor.js # YAML Front Matter Parsing
 │   │   └── amb-extractor.js  # AMB/Schema.org Metadaten
-│   └── transformers/         # (geplant)
-│       ├── wordpress.js
-│       └── nostr.js
+│   ├── transformers/
+│   │   ├── wordpress-transformer.js  # WordPress REST API v2
+│   │   └── nostr-transformer.js      # Nostr NIP-23
+│   └── dashboard/
+│       ├── terminal-dashboard.js     # ANSI Terminal Dashboard
+│       └── web-dashboard.js          # HTTP Dashboard (Port 3000)
 ├── examples/
 │   ├── parse-forgejo.js      # Beispiel: Forgejo API
 │   ├── parse-local.js        # Beispiel: Lokale Datei
-│   └── parse-url.js          # Beispiel: HTTP URL
+│   ├── parse-url.js          # Beispiel: HTTP URL
+│   ├── publish-wordpress.js  # Beispiel: WordPress Publishing
+│   └── publish-nostr.js      # Beispiel: Nostr Publishing
 ├── test/
-│   └── parser.test.js
+│   ├── parser.test.js
+│   ├── wordpress-transformer.test.js
+│   └── nostr-transformer.test.js
 ├── docs/
 │   ├── ARCHITECTURE.md       # Architektur-Dokumentation
 │   ├── API.md               # API-Referenz
-│   └── DECISIONS.md         # Design-Entscheidungen
+│   ├── DECISIONS.md         # Design-Entscheidungen
+│   └── TRANSFORMERS.md      # Transformer-Dokumentation
 ├── .env.example
 ├── .gitignore
 ├── .editorconfig
@@ -83,6 +92,16 @@ FORGEJO_OWNER=Comenius-Institut
 FORGEJO_REPO=FOERBICO_und_rpi-virtuell
 FORGEJO_BRANCH=main
 FORGEJO_TOKEN=                    # Optional für private Repos
+
+# WordPress REST API v2
+WP_BASE_URL=https://example.com/wp-json/wp/v2
+WP_USERNAME=your_wordpress_username
+WP_PASSWORD=your_wordpress_application_password
+
+# Nostr
+NOSTR_PUBKEY=your_32_byte_hex_public_key
+NOSTR_PRIVKEY=your_32_byte_hex_private_key
+NOSTR_RELAYS=wss://relay.damus.io,wss://nos.lol,wss://relay.nostr.band
 
 # API Rate Limiting
 API_RATE_LIMIT_DELAY_MS=100
@@ -134,6 +153,72 @@ console.log(ambData.name);        // Titel
 console.log(ambData.creator);     // Autoren
 console.log(ambData.license);     // Lizenz
 console.log(ambData.about);       // Themen/Tags
+```
+
+### 4. Zu WordPress publishen
+
+```javascript
+import { parse, createForgejoClient, publishToWordPress } from './src/index.js';
+
+// Von Forgejo laden und parsen
+const client = createForgejoClient();
+const markdown = await client.getPostContent('2025-04-20-OER-und-Symbole');
+const result = await parse(markdown);
+
+// Zu WordPress publishen
+const published = await publishToWordPress(
+  result.metadata,
+  result.content,
+  {
+    baseUrl: process.env.WP_BASE_URL,
+    username: process.env.WP_USERNAME,
+    password: process.env.WP_PASSWORD
+  },
+  {
+    status: 'publish',
+    authorId: 1
+  }
+);
+
+console.log(`✅ Published: ${published.link}`);
+```
+
+### 5. Zu Nostr publishen
+
+```javascript
+import { parse, createForgejoClient, publishToNostr } from './src/index.js';
+
+// Von Forgejo laden und parsen
+const client = createForgejoClient();
+const markdown = await client.getPostContent('2024-08-09-sdg-logos');
+const result = await parse(markdown);
+
+// Zu Nostr publishen
+const nostrResult = await publishToNostr(
+  result.metadata,
+  result.content,
+  {
+    pubkey: process.env.NOSTR_PUBKEY,
+    privateKey: process.env.NOSTR_PRIVKEY,
+    relayUrls: process.env.NOSTR_RELAYS.split(',')
+  },
+  {
+    identifier: 'sdg-logos-oer'
+  }
+);
+
+console.log(`✅ Published to ${nostrResult.results.length} relays`);
+console.log(`Event ID: ${nostrResult.event.id}`);
+```
+
+### 6. Dashboard starten
+
+```bash
+# Terminal Dashboard
+node examples/terminal-dashboard.js
+
+# Web Dashboard (http://localhost:3000)
+node examples/web-dashboard.js
 ```
 
 ## 🎓 AMB-Metadatenstandard
@@ -210,27 +295,33 @@ Siehe [docs/DECISIONS.md](./docs/DECISIONS.md) für detaillierte Design-Entschei
 
 ## 📋 Roadmap
 
-### Phase 1: Core Parser (aktuell)
+### Phase 1: Core Parser ✅
 - [x] Projekt-Setup mit Git, npm, Dokumentation
-- [ ] Markdown + YAML Parser implementieren
-- [ ] Forgejo API Client
-- [ ] AMB-Metadaten-Extraktor
-- [ ] Beispiele und Tests
+- [x] Markdown + YAML Parser implementieren
+- [x] Forgejo API Client
+- [x] AMB-Metadaten-Extraktor
+- [x] Beispiele und Tests
+- [x] Batch-Testing (53/54 Posts valid - 98%)
 
-### Phase 2: Transformers (nächster Schritt)
-- [ ] WordPress REST API v2 Transformer
+### Phase 2: Transformers ✅
+- [x] WordPress REST API v2 Transformer
   - title, content, excerpt, featured_media
   - tags, categories, custom fields
-  - author mapping
-- [ ] Nostr NIP-23 Transformer
+  - author mapping, bidirectional conversion
+- [x] Nostr NIP-23 Transformer
   - d (identifier), title, summary
-  - published_at, image
-  - t (tags), e/a/p (references)
+  - published_at, image, license
+  - t (tags), author tags, subject tags
+  - AMB metadata preservation
+- [x] Test Suite (37 Tests, 100% passing)
+- [x] Working Examples mit real data
 
-### Phase 3: Erweiterte Features
+### Phase 3: Erweiterte Features (geplant)
 - [ ] Browser-Build (ESM)
 - [ ] CLI-Tool
-- [ ] Batch-Processing
+- [ ] Batch-Publishing-Scripts
+- [ ] Media-Upload für WordPress
+- [ ] Nostr Relay Pool Management
 - [ ] Caching-Strategie
 - [ ] Error-Handling & Logging
 
@@ -251,7 +342,8 @@ MIT License - siehe [LICENSE](./LICENSE) für Details.
 - **unified/remark**: https://unifiedjs.com/
 - **WordPress REST API**: https://developer.wordpress.org/rest-api/
 - **Nostr NIPs**: https://github.com/nostr-protocol/nips
+- **Transformer-Dokumentation**: [docs/TRANSFORMERS.md](./docs/TRANSFORMERS.md)
 
 ---
 
-**Status:** 🚧 In aktiver Entwicklung - Phase 1
+**Status:** � Phase 2 abgeschlossen - Production Ready!

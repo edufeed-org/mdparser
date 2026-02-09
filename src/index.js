@@ -33,6 +33,23 @@ export {
   createForgejoClient
 } from './forgejo-client.js'
 
+// WordPress Transformer
+export {
+  transformToWordPress,
+  transformFromWordPress,
+  WordPressClient,
+  publishToWordPress
+} from './transformers/wordpress-transformer.js'
+
+// Nostr Transformer
+export {
+  transformToNostr,
+  transformFromNostr,
+  signEvent,
+  NostrClient,
+  publishToNostr
+} from './transformers/nostr-transformer.js'
+
 // Für parse() Funktion
 import { parseMarkdownFile as _parseMarkdownFile, parseMarkdownString as _parseMarkdownString } from './parser.js'
 
