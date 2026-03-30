@@ -263,21 +263,102 @@ Selber `deno task sync`-Aufruf, nur als `.github/workflows/sync.yml` statt `.woo
 
 **Phase 2 (später):** NIP-46 Bunker. Das `signing.ts`-Modul ist so aufgebaut, dass der Signing-Mechanismus austauschbar ist — ein Interface `signEvent(event) → signedEvent` wird von beiden Implementierungen erfüllt.
 
+## Bild-Strategie
+
+### Prinzip: oer.community-URLs bleiben stabil
+
+Bilder liegen im Forgejo-Repo neben den Markdown-Dateien (z.B. `content/de/posts/oercamp-2025/cover.jpg`). Sie werden auf Blossom hochgeladen (content-addressed via sha256), aber unter menschenlesbaren oer.community-URLs referenziert. Das nsite-Gateway uebersetzt transparent.
+
+### Bildverarbeitung in der CI-Pipeline
+
+Die Bild-Verarbeitung geschieht **in der CI-Pipeline**, nicht im Sync-Script selbst. Das Sync-Script ist nur fuer Nostr-Events zustaendig.
+
+```
+Woodpecker CI Pipeline:
+  1. sync-script: Markdown → Kind 30023 + Kind 30142 Events
+  2. bild-upload: Bilder aus Forgejo-Repo → Blossom hochladen
+  3. bild-events: Kind 30142 Events fuer Bilder erstellen (AMB-Metadaten)
+  4. nostrmcp/build: Events → HTML (dist/)
+  5. bilder-kopieren: Bilder aus Forgejo-Repo → dist/{slug}/
+  6. nsyte deploy: dist/ → nsite (Manifest + Blossom-Blobs)
+```
+
+### Kind 30142 fuer Bilder (AMB-Metadaten)
+
+Bilder sind eigenstaendige OER-Ressourcen und erhalten ein eigenes Kind 30142 Event auf dem AMB-Relay. Dieses Format ist kompatibel mit dem [oer-finder-plugin](https://github.com/edufeed-org/oer-finder-plugin/blob/main/docs/nostr-events.md).
+
+```json
+{
+  "kind": 30142,
+  "tags": [
+    ["d", "https://oer.community/oercamp-2025/cover.jpg"],
+    ["type", "LearningResource"],
+    ["type", "Image"],
+    ["name", "OERcamp 2025 Hamburg"],
+    ["description", "Foto vom OERcamp 2025"],
+    ["dateCreated", "2025-06-15"],
+    ["datePublished", "2025-06-20"],
+    ["learningResourceType:id", "https://w3id.org/kim/hcrt/image"],
+    ["learningResourceType:prefLabel:de", "Abbildung"],
+    ["learningResourceType:prefLabel:en", "Image"],
+    ["inLanguage", "de"],
+    ["license:id", "https://creativecommons.org/licenses/by/4.0/"],
+    ["isAccessibleForFree", "true"],
+    ["image", "https://oer.community/oercamp-2025/cover.jpg"]
+  ],
+  "content": ""
+}
+```
+
+**Wichtig:** Die `image`-URL und der `d`-Tag verwenden die oer.community-URL, nicht die Blossom-URL. Das nsite-Gateway loest die URL transparent auf:
+
+```
+GET https://oer.community/oercamp-2025/cover.jpg
+  → nsite Manifest: ["path", "/oercamp-2025/cover.jpg", "<sha256>"]
+  → Blossom: GET https://blossom.edufeed.org/<sha256>
+```
+
+### Bild-Metadaten aus YAML
+
+Bild-AMB-Events erben Metadaten vom zugehoerigen Artikel:
+- `license` → vom Artikel (oder eigene Bild-Lizenz falls abweichend)
+- `inLanguage` → vom Artikel
+- `datePublished` → vom Artikel
+- `name`, `description` → aus dem `alt`-Text im Markdown oder aus YAML
+
+Offener Punkt: Wie werden bild-spezifische Metadaten (eigener Urheber, abweichende Lizenz) im YAML abgebildet? Moeglicher Ansatz:
+
+```yaml
+images:
+  cover.jpg:
+    name: "Foto vom OERcamp"
+    creator: "Fotografin Name"
+    license: "https://creativecommons.org/licenses/by-sa/4.0/"
+```
+
+Dies ist noch nicht spezifiziert und erfordert eine Erweiterung des YAML-Formats.
+
 ## Abgrenzung
 
-| Verantwortung | Zuständig |
+| Verantwortung | Zustaendig |
 |---|---|
-| Markdown → Nostr Events (30023, 30142) | **md-to-nostr (dieses Script)** |
-| Events lesen, HTML bauen, Website deployen | **nostrmcp** |
-| Bilder auf oer.community verfügbar machen | **nostrmcp + nsyte deploy** |
+| Markdown → Nostr Events (30023, 30142 fuer Artikel) | **md-to-nostr (dieses Script)** |
+| Bilder auf Blossom hochladen | **CI-Pipeline (Woodpecker)** |
+| Kind 30142 Events fuer Bilder | **CI-Pipeline oder separates Script** |
+| Events lesen, HTML bauen | **nostrmcp/build** |
+| Bilder ins dist/ kopieren | **CI-Pipeline** |
+| Website deployen (nsyte) | **CI-Pipeline** |
+| Bild ausliefern unter oer.community-URL | **nsite-Gateway (Manifest → Blossom)** |
 | YAML-Frontmatter validieren/korrigieren | **Manuell (YAML-Assistent-Prompt)** |
 | Kanonische Keywords pflegen | **Manuell** |
 
 ## Vorbereitungsschritte
 
 Bevor der Sync produktiv laufen kann:
-1. Alle bestehenden Beiträge mit dem YAML-Frontmatter-Assistenten validieren
-2. `keywords`-Feld in allen Posts ergänzen (falls nur `tags` im staticSiteGenerator vorhanden)
-3. `id`-Feld auf konsistente `https://oer.community/slug`-Form prüfen
-4. Seiten (`content/{name}/index.md`) mit vollständigem commonMetadata-Block versehen
-5. **Redaktionelle Prüfung `type`-Feld:** Für jeden Inhalt entscheiden ob `type: LearningResource` korrekt ist (→ bekommt 30142 AMB-Event) oder ob es eine einfache Webseite ist (→ nur 30023)
+1. Alle bestehenden Beitraege mit dem YAML-Frontmatter-Assistenten validieren
+2. `keywords`-Feld in allen Posts ergaenzen (falls nur `tags` im staticSiteGenerator vorhanden)
+3. `id`-Feld auf konsistente `https://oer.community/slug`-Form pruefen
+4. Seiten (`content/{name}/index.md`) mit vollstaendigem commonMetadata-Block versehen
+5. **Redaktionelle Pruefung `type`-Feld:** Fuer jeden Inhalt entscheiden ob `type: LearningResource` korrekt ist (→ bekommt 30142 AMB-Event) oder ob es eine einfache Webseite ist (→ nur 30023)
+6. **Blossom-Server auswaehlen** und Zugangstoken fuer CI konfigurieren
+7. **Bild-Metadaten pruefen:** Lizenz- und Urheberangaben fuer Bilder klaeren
