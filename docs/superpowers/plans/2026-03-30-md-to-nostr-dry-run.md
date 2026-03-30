@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a Deno-based sync script that reads local Markdown files, extracts commonMetadata, builds Kind 30023 and Kind 30142 Nostr events, and outputs them as JSON in dry-run mode.
+**Goal:** Build a Deno-based sync script that reads local Markdown files, extracts commonMetadata, builds Kind 30023 and Kind 30142 Nostr events (for articles AND images), and outputs them as JSON in dry-run mode.
 
-**Architecture:** Modular Deno TypeScript — parser extracts YAML frontmatter, separate event builders for 30023 and 30142, orchestrator reads local files and pipes through the pipeline. No network access needed for dry-run. Follows wp-to-nostr patterns (env vars, `deno task` commands).
+**Architecture:** Modular Deno TypeScript — parser extracts YAML frontmatter, separate event builders for 30023 (articles), 30142 (article AMB), and 30142 (image AMB), orchestrator reads local files and pipes through the pipeline. Images get their own `.yaml` sidecar files with metadata. No network access needed for dry-run. Follows wp-to-nostr patterns (env vars, `deno task` commands).
 
 **Tech Stack:** Deno, TypeScript, `npm:yaml` for YAML parsing, `npm:nostr-tools` for event structure validation.
 
@@ -20,11 +20,15 @@ sync/
 ├── parser_test.ts         # Tests for parser
 ├── validator.ts           # Pflichtfeld-Validierung
 ├── validator_test.ts      # Tests for validator
+├── images.ts              # Image YAML sidecar discovery + parsing
+├── images_test.ts         # Tests for image discovery
 ├── events/
 │   ├── article.ts         # Kind 30023 event builder
 │   ├── article_test.ts    # Tests for article events
-│   ├── amb.ts             # Kind 30142 event builder
-│   └── amb_test.ts        # Tests for AMB events
+│   ├── amb.ts             # Kind 30142 event builder (articles)
+│   ├── amb_test.ts        # Tests for article AMB events
+│   ├── image_amb.ts       # Kind 30142 event builder (images)
+│   └── image_amb_test.ts  # Tests for image AMB events
 ├── sync.ts                # Main orchestrator (reads files, builds events, outputs)
 └── sync_test.ts           # Integration test with fixture files
 ```
@@ -33,10 +37,19 @@ sync/
 ```
 sync/testdata/
 ├── content/
-│   ├── posts/de/2025-09-11-oep-test/index.md    # Valid post with LearningResource
-│   ├── posts/en/2025-09-11-oep-test-en/index.md # Valid English post
-│   ├── impressum/index.md                        # Page without LearningResource
-│   └── missing-fields/index.md                   # Invalid: missing required fields
+│   ├── posts/de/2025-09-11-test-artikel/
+│   │   ├── index.md                        # Valid post with LearningResource
+│   │   ├── cover.jpg                       # Dummy image file
+│   │   ├── cover.jpg.yaml                  # Image metadata (CC-BY-SA)
+│   │   ├── diagram.png                     # Dummy image without YAML
+│   │   └── ki-bild.png                     # Dummy image
+│   │   └── ki-bild.png.yaml               # Image metadata (CC0)
+│   ├── posts/en/2025-09-11-test-article-en/
+│   │   └── index.md                        # Valid English post
+│   ├── impressum/
+│   │   └── index.md                        # Page without LearningResource
+│   └── missing-fields/
+│       └── index.md                        # Invalid: missing required fields
 ```
 
 ---
@@ -876,7 +889,403 @@ git commit -m "feat(sync): add Kind 30142 AMB event builder with NIP-AMB flatten
 
 ---
 
-### Task 7: Sync orchestrator with dry-run output
+### Task 7: Image YAML sidecar discovery and parsing
+
+**Files:**
+- Create: `sync/images.ts`
+- Create: `sync/images_test.ts`
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+// sync/images_test.ts
+import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { discoverImages, parseImageYaml, validateImageMeta, type ImageMeta } from "./images.ts";
+
+Deno.test("discoverImages finds images with and without YAML sidecars", async () => {
+  const images = await discoverImages("./testdata/content/posts/de/2025-09-11-test-artikel");
+
+  assertEquals(images.length, 3);
+
+  const cover = images.find((i) => i.filename === "cover.jpg");
+  assertEquals(cover !== undefined, true);
+  assertEquals(cover!.hasYaml, true);
+  assertEquals(cover!.yamlPath, "./testdata/content/posts/de/2025-09-11-test-artikel/cover.jpg.yaml");
+
+  const diagram = images.find((i) => i.filename === "diagram.png");
+  assertEquals(diagram !== undefined, true);
+  assertEquals(diagram!.hasYaml, false);
+
+  const kiBild = images.find((i) => i.filename === "ki-bild.png");
+  assertEquals(kiBild !== undefined, true);
+  assertEquals(kiBild!.hasYaml, true);
+});
+
+Deno.test("discoverImages ignores non-image files", async () => {
+  const images = await discoverImages("./testdata/content/posts/de/2025-09-11-test-artikel");
+  const filenames = images.map((i) => i.filename);
+  assertEquals(filenames.includes("index.md"), false);
+  assertEquals(filenames.includes("cover.jpg.yaml"), false);
+});
+
+Deno.test("parseImageYaml reads sidecar YAML", () => {
+  const meta = parseImageYaml("./testdata/content/posts/de/2025-09-11-test-artikel/cover.jpg.yaml");
+  assertEquals(meta !== null, true);
+  assertEquals(meta!.name, "Testbild Cover");
+  assertEquals(meta!.license, "https://creativecommons.org/licenses/by-sa/4.0/");
+  assertEquals(meta!.creator?.name, "Fotografin Schmidt");
+});
+
+Deno.test("parseImageYaml reads CC0 image without creator", () => {
+  const meta = parseImageYaml("./testdata/content/posts/de/2025-09-11-test-artikel/ki-bild.png.yaml");
+  assertEquals(meta !== null, true);
+  assertEquals(meta!.license, "https://creativecommons.org/publicdomain/zero/1.0/");
+  assertEquals(meta!.creator, undefined);
+});
+
+Deno.test("validateImageMeta returns valid for complete metadata", () => {
+  const result = validateImageMeta({ name: "Test", license: "https://creativecommons.org/licenses/by/4.0/" });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors, []);
+});
+
+Deno.test("validateImageMeta catches missing license", () => {
+  const result = validateImageMeta({ name: "Test" } as ImageMeta);
+  assertEquals(result.valid, false);
+  assertEquals(result.errors[0].includes("license"), true);
+});
+
+Deno.test("validateImageMeta catches missing name", () => {
+  const result = validateImageMeta({ license: "https://creativecommons.org/licenses/by/4.0/" } as ImageMeta);
+  assertEquals(result.valid, false);
+  assertEquals(result.errors[0].includes("name"), true);
+});
+```
+
+- [ ] **Step 2: Create test fixture — cover.jpg.yaml**
+
+```yaml
+# sync/testdata/content/posts/de/2025-09-11-test-artikel/cover.jpg.yaml
+name: "Testbild Cover"
+description: "Ein Testbild fuer den Artikel"
+creator:
+  name: "Fotografin Schmidt"
+  id: "https://orcid.org/0000-0001-2345-6789"
+license: "https://creativecommons.org/licenses/by-sa/4.0/"
+```
+
+- [ ] **Step 3: Create test fixture — ki-bild.png.yaml**
+
+```yaml
+# sync/testdata/content/posts/de/2025-09-11-test-artikel/ki-bild.png.yaml
+name: "KI-generierte Illustration"
+description: "Erstellt mit Gemini ImageFX"
+license: "https://creativecommons.org/publicdomain/zero/1.0/"
+```
+
+- [ ] **Step 4: Create dummy image files (empty, just for discovery)**
+
+Run:
+```bash
+touch sync/testdata/content/posts/de/2025-09-11-test-artikel/cover.jpg
+touch sync/testdata/content/posts/de/2025-09-11-test-artikel/diagram.png
+touch sync/testdata/content/posts/de/2025-09-11-test-artikel/ki-bild.png
+```
+
+- [ ] **Step 5: Run test to verify it fails**
+
+Run: `cd sync && deno test images_test.ts --allow-read`
+
+Expected: FAIL — `discoverImages` not found.
+
+- [ ] **Step 6: Write images.ts**
+
+```typescript
+// sync/images.ts
+import { parse } from "yaml";
+
+const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif"]);
+
+export interface ImageFile {
+  filename: string;
+  dirPath: string;
+  hasYaml: boolean;
+  yamlPath?: string;
+}
+
+export interface ImageMeta {
+  name: string;
+  description?: string;
+  license: string;
+  creator?: {
+    name: string;
+    id?: string;
+  };
+  inLanguage?: string;
+  dateCreated?: string;
+  datePublished?: string;
+}
+
+export interface ImageValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export async function discoverImages(dirPath: string): Promise<ImageFile[]> {
+  const images: ImageFile[] = [];
+
+  try {
+    for await (const entry of Deno.readDir(dirPath)) {
+      if (!entry.isFile) continue;
+      const ext = entry.name.substring(entry.name.lastIndexOf(".")).toLowerCase();
+      if (!IMAGE_EXTENSIONS.has(ext)) continue;
+
+      const yamlPath = `${dirPath}/${entry.name}.yaml`;
+      let hasYaml = false;
+      try {
+        await Deno.stat(yamlPath);
+        hasYaml = true;
+      } catch { /* no yaml sidecar */ }
+
+      images.push({
+        filename: entry.name,
+        dirPath,
+        hasYaml,
+        yamlPath: hasYaml ? yamlPath : undefined,
+      });
+    }
+  } catch { /* dir not readable */ }
+
+  return images;
+}
+
+export function parseImageYaml(yamlPath: string): ImageMeta | null {
+  try {
+    const content = Deno.readTextFileSync(yamlPath);
+    const parsed = parse(content);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed as ImageMeta;
+  } catch {
+    return null;
+  }
+}
+
+export function validateImageMeta(meta: ImageMeta): ImageValidationResult {
+  const errors: string[] = [];
+
+  if (!meta.name) {
+    errors.push("Pflichtfeld fehlt: name");
+  }
+
+  if (!meta.license) {
+    errors.push("Pflichtfeld fehlt: license");
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+```
+
+- [ ] **Step 7: Run tests to verify they pass**
+
+Run: `cd sync && deno test images_test.ts --allow-read`
+
+Expected: 7 tests pass.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add sync/images.ts sync/images_test.ts sync/testdata/content/posts/de/2025-09-11-test-artikel/cover.jpg sync/testdata/content/posts/de/2025-09-11-test-artikel/cover.jpg.yaml sync/testdata/content/posts/de/2025-09-11-test-artikel/diagram.png sync/testdata/content/posts/de/2025-09-11-test-artikel/ki-bild.png sync/testdata/content/posts/de/2025-09-11-test-artikel/ki-bild.png.yaml
+git commit -m "feat(sync): add image YAML sidecar discovery and parsing"
+```
+
+---
+
+### Task 8: Kind 30142 image AMB event builder
+
+**Files:**
+- Create: `sync/events/image_amb.ts`
+- Create: `sync/events/image_amb_test.ts`
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+// sync/events/image_amb_test.ts
+import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { buildImageAmbEvent } from "./image_amb.ts";
+import type { ImageMeta } from "../images.ts";
+
+const PUBKEY = "5a12b41ec15b466321e88c371be2dc47d9193f9c8bba4ab09fc50045bd35aedf";
+
+const IMAGE_META: ImageMeta = {
+  name: "Testbild Cover",
+  description: "Ein Testbild",
+  license: "https://creativecommons.org/licenses/by-sa/4.0/",
+  creator: {
+    name: "Fotografin Schmidt",
+    id: "https://orcid.org/0000-0001-2345-6789",
+  },
+  dateCreated: "2025-06-15",
+  datePublished: "2025-06-20",
+  inLanguage: "de",
+};
+
+const SLUG = "test-artikel";
+const FILENAME = "cover.jpg";
+
+Deno.test("buildImageAmbEvent creates kind 30142 with URL-based d-tag", () => {
+  const event = buildImageAmbEvent(IMAGE_META, SLUG, FILENAME, PUBKEY);
+  assertEquals(event.kind, 30142);
+  const dTag = event.tags.find((t: string[]) => t[0] === "d");
+  assertEquals(dTag?.[1], "https://oer.community/test-artikel/cover.jpg");
+});
+
+Deno.test("buildImageAmbEvent sets dual type tags", () => {
+  const event = buildImageAmbEvent(IMAGE_META, SLUG, FILENAME, PUBKEY);
+  const typeTags = event.tags.filter((t: string[]) => t[0] === "type");
+  assertEquals(typeTags.length, 2);
+  assertEquals(typeTags[0][1], "LearningResource");
+  assertEquals(typeTags[1][1], "Image");
+});
+
+Deno.test("buildImageAmbEvent includes fixed learningResourceType tags", () => {
+  const event = buildImageAmbEvent(IMAGE_META, SLUG, FILENAME, PUBKEY);
+  const lrtId = event.tags.find((t: string[]) => t[0] === "learningResourceType:id");
+  const lrtDe = event.tags.find((t: string[]) => t[0] === "learningResourceType:prefLabel:de");
+  const lrtEn = event.tags.find((t: string[]) => t[0] === "learningResourceType:prefLabel:en");
+  assertEquals(lrtId?.[1], "https://w3id.org/kim/hcrt/image");
+  assertEquals(lrtDe?.[1], "Abbildung");
+  assertEquals(lrtEn?.[1], "Image");
+});
+
+Deno.test("buildImageAmbEvent includes creator with id", () => {
+  const event = buildImageAmbEvent(IMAGE_META, SLUG, FILENAME, PUBKEY);
+  const creatorName = event.tags.find((t: string[]) => t[0] === "creator:name");
+  const creatorId = event.tags.find((t: string[]) => t[0] === "creator:id");
+  assertEquals(creatorName?.[1], "Fotografin Schmidt");
+  assertEquals(creatorId?.[1], "https://orcid.org/0000-0001-2345-6789");
+});
+
+Deno.test("buildImageAmbEvent includes license, dates, image URL", () => {
+  const event = buildImageAmbEvent(IMAGE_META, SLUG, FILENAME, PUBKEY);
+  const getTag = (name: string) => event.tags.find((t: string[]) => t[0] === name);
+  assertEquals(getTag("license:id")?.[1], "https://creativecommons.org/licenses/by-sa/4.0/");
+  assertEquals(getTag("dateCreated")?.[1], "2025-06-15");
+  assertEquals(getTag("datePublished")?.[1], "2025-06-20");
+  assertEquals(getTag("image")?.[1], "https://oer.community/test-artikel/cover.jpg");
+  assertEquals(getTag("isAccessibleForFree")?.[1], "true");
+});
+
+Deno.test("buildImageAmbEvent includes inLanguage if set", () => {
+  const event = buildImageAmbEvent(IMAGE_META, SLUG, FILENAME, PUBKEY);
+  const lang = event.tags.find((t: string[]) => t[0] === "inLanguage");
+  assertEquals(lang?.[1], "de");
+});
+
+Deno.test("buildImageAmbEvent omits creator for CC0 image without creator", () => {
+  const cc0Meta: ImageMeta = {
+    name: "KI-Bild",
+    license: "https://creativecommons.org/publicdomain/zero/1.0/",
+  };
+  const event = buildImageAmbEvent(cc0Meta, SLUG, FILENAME, PUBKEY);
+  const creatorTag = event.tags.find((t: string[]) => t[0] === "creator:name");
+  assertEquals(creatorTag, undefined);
+});
+
+Deno.test("buildImageAmbEvent sets empty content", () => {
+  const event = buildImageAmbEvent(IMAGE_META, SLUG, FILENAME, PUBKEY);
+  assertEquals(event.content, "");
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd sync && deno test events/image_amb_test.ts`
+
+Expected: FAIL — `buildImageAmbEvent` not found.
+
+- [ ] **Step 3: Write image_amb.ts**
+
+```typescript
+// sync/events/image_amb.ts
+import type { ImageMeta } from "../images.ts";
+import type { UnsignedEvent } from "./article.ts";
+
+export function buildImageAmbEvent(
+  meta: ImageMeta,
+  articleSlug: string,
+  filename: string,
+  pubkey: string,
+): UnsignedEvent {
+  const imageUrl = `https://oer.community/${articleSlug}/${filename}`;
+
+  const tags: string[][] = [
+    ["d", imageUrl],
+    ["type", "LearningResource"],
+    ["type", "Image"],
+    ["name", meta.name],
+  ];
+
+  if (meta.description) {
+    tags.push(["description", meta.description]);
+  }
+
+  // License
+  tags.push(["license:id", meta.license]);
+
+  // Creator (optional, e.g. not for CC0/AI-generated)
+  if (meta.creator) {
+    tags.push(["creator:name", meta.creator.name]);
+    if (meta.creator.id) {
+      tags.push(["creator:id", meta.creator.id]);
+    }
+  }
+
+  // Language (optional)
+  if (meta.inLanguage) {
+    tags.push(["inLanguage", meta.inLanguage]);
+  }
+
+  // Dates (optional)
+  if (meta.dateCreated) {
+    tags.push(["dateCreated", meta.dateCreated]);
+  }
+  if (meta.datePublished) {
+    tags.push(["datePublished", meta.datePublished]);
+  }
+
+  // Fixed image-specific tags
+  tags.push(["learningResourceType:id", "https://w3id.org/kim/hcrt/image"]);
+  tags.push(["learningResourceType:prefLabel:de", "Abbildung"]);
+  tags.push(["learningResourceType:prefLabel:en", "Image"]);
+  tags.push(["isAccessibleForFree", "true"]);
+  tags.push(["image", imageUrl]);
+
+  return {
+    kind: 30142,
+    pubkey,
+    created_at: Math.floor(Date.now() / 1000),
+    tags,
+    content: "",
+  };
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `cd sync && deno test events/image_amb_test.ts --allow-read`
+
+Expected: 8 tests pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add sync/events/image_amb.ts sync/events/image_amb_test.ts
+git commit -m "feat(sync): add Kind 30142 image AMB event builder"
+```
+
+---
+
+### Task 9: Sync orchestrator with dry-run output (including images)
 
 **Files:**
 - Create: `sync/sync.ts`
@@ -1041,7 +1450,7 @@ Deno.test("processContent returns events for valid LearningResource", async () =
   const files = await discoverContent("./testdata/content");
   const validPost = files.find((f) => f.path.includes("test-artikel") && f.lang === "de")!;
 
-  const result = processContent(validPost, "testpubkey", "wss://content/", "wss://amb/");
+  const result = await processContent(validPost, "testpubkey", "wss://content/", "wss://amb/");
 
   assertEquals(result.status, "ok");
   assertEquals(result.articleEvent !== null, true);
@@ -1054,7 +1463,7 @@ Deno.test("processContent returns only article event for non-LearningResource", 
   const files = await discoverContent("./testdata/content");
   const impressum = files.find((f) => f.path.includes("impressum"))!;
 
-  const result = processContent(impressum, "testpubkey", "wss://content/", "wss://amb/");
+  const result = await processContent(impressum, "testpubkey", "wss://content/", "wss://amb/");
 
   assertEquals(result.status, "ok");
   assertEquals(result.articleEvent !== null, true);
@@ -1065,10 +1474,35 @@ Deno.test("processContent returns error for missing fields", async () => {
   const files = await discoverContent("./testdata/content");
   const invalid = files.find((f) => f.path.includes("missing-fields"))!;
 
-  const result = processContent(invalid, "testpubkey", "wss://content/", "wss://amb/");
+  const result = await processContent(invalid, "testpubkey", "wss://content/", "wss://amb/");
 
   assertEquals(result.status, "error");
   assertEquals(result.errors.length > 0, true);
+});
+
+Deno.test("processContent discovers image AMB events", async () => {
+  const files = await discoverContent("./testdata/content");
+  const validPost = files.find((f) => f.path.includes("test-artikel") && f.lang === "de")!;
+
+  const result = await processContent(validPost, "testpubkey", "wss://content/", "wss://amb/");
+
+  assertEquals(result.status, "ok");
+  // cover.jpg has YAML → image AMB event, ki-bild.png has YAML → image AMB event
+  // diagram.png has NO YAML → warning, no event
+  assertEquals(result.imageAmbEvents.length, 2);
+  assertEquals(result.imageAmbEvents[0].kind, 30142);
+  assertEquals(result.imageWarnings.length, 1); // diagram.png missing YAML
+  assertEquals(result.imageWarnings[0].includes("diagram.png"), true);
+});
+
+Deno.test("processContent returns no image events for page without images", async () => {
+  const files = await discoverContent("./testdata/content");
+  const impressum = files.find((f) => f.path.includes("impressum"))!;
+
+  const result = await processContent(impressum, "testpubkey", "wss://content/", "wss://amb/");
+
+  assertEquals(result.imageAmbEvents.length, 0);
+  assertEquals(result.imageWarnings.length, 0);
 });
 ```
 
@@ -1083,10 +1517,12 @@ Expected: FAIL — `discoverContent` not found.
 ```typescript
 // sync/sync.ts
 import { loadConfig } from "./config.ts";
-import { parseMarkdown, type ParsedMarkdown } from "./parser.ts";
+import { parseMarkdown } from "./parser.ts";
 import { validate } from "./validator.ts";
-import { buildArticleEvent, type UnsignedEvent } from "./events/article.ts";
+import { buildArticleEvent, extractSlug, type UnsignedEvent } from "./events/article.ts";
 import { buildAmbEvent } from "./events/amb.ts";
+import { buildImageAmbEvent } from "./events/image_amb.ts";
+import { discoverImages, parseImageYaml, validateImageMeta } from "./images.ts";
 
 export interface ContentFile {
   path: string;
@@ -1099,6 +1535,8 @@ export interface SyncResult {
   status: "ok" | "error" | "skipped";
   articleEvent: UnsignedEvent | null;
   ambEvent: UnsignedEvent | null;
+  imageAmbEvents: UnsignedEvent[];
+  imageWarnings: string[];
   errors: string[];
   warnings: string[];
 }
@@ -1139,47 +1577,41 @@ export async function discoverContent(contentDir: string): Promise<ContentFile[]
   return files;
 }
 
-export function processContent(
+export async function processContent(
   file: ContentFile,
   pubkey: string,
   contentRelay: string,
   ambRelay: string,
-): SyncResult {
+): Promise<SyncResult> {
   let markdown: string;
   try {
     markdown = Deno.readTextFileSync(file.path);
   } catch (e) {
     return {
-      slug: file.path,
-      status: "error",
-      articleEvent: null,
-      ambEvent: null,
-      errors: [`Datei nicht lesbar: ${e}`],
-      warnings: [],
+      slug: file.path, status: "error",
+      articleEvent: null, ambEvent: null,
+      imageAmbEvents: [], imageWarnings: [],
+      errors: [`Datei nicht lesbar: ${e}`], warnings: [],
     };
   }
 
   const parsed = parseMarkdown(markdown);
   if (!parsed) {
     return {
-      slug: file.path,
-      status: "error",
-      articleEvent: null,
-      ambEvent: null,
-      errors: ["Kein YAML-Frontmatter gefunden"],
-      warnings: [],
+      slug: file.path, status: "error",
+      articleEvent: null, ambEvent: null,
+      imageAmbEvents: [], imageWarnings: [],
+      errors: ["Kein YAML-Frontmatter gefunden"], warnings: [],
     };
   }
 
   const validation = validate(parsed.metadata);
   if (!validation.valid) {
     return {
-      slug: parsed.metadata.id ?? file.path,
-      status: "error",
-      articleEvent: null,
-      ambEvent: null,
-      errors: validation.errors,
-      warnings: validation.warnings,
+      slug: parsed.metadata.id ?? file.path, status: "error",
+      articleEvent: null, ambEvent: null,
+      imageAmbEvents: [], imageWarnings: [],
+      errors: validation.errors, warnings: validation.warnings,
     };
   }
 
@@ -1192,11 +1624,40 @@ export function processContent(
 
   const slug = articleEvent.tags.find((t) => t[0] === "d")?.[1] ?? file.path;
 
+  // Discover and process images in the same directory
+  const dirPath = file.path.substring(0, file.path.lastIndexOf("/"));
+  const imageFiles = await discoverImages(dirPath);
+  const imageAmbEvents: UnsignedEvent[] = [];
+  const imageWarnings: string[] = [];
+
+  for (const img of imageFiles) {
+    if (!img.hasYaml) {
+      imageWarnings.push(`${img.filename} — KEINE .yaml Datei! Fehlende Lizenzangabe!`);
+      continue;
+    }
+
+    const meta = parseImageYaml(img.yamlPath!);
+    if (!meta) {
+      imageWarnings.push(`${img.filename} — .yaml Datei nicht lesbar`);
+      continue;
+    }
+
+    const imgValidation = validateImageMeta(meta);
+    if (!imgValidation.valid) {
+      imageWarnings.push(`${img.filename} — ${imgValidation.errors.join(", ")}`);
+      continue;
+    }
+
+    imageAmbEvents.push(buildImageAmbEvent(meta, slug, img.filename, pubkey));
+  }
+
   return {
     slug,
     status: "ok",
     articleEvent,
     ambEvent,
+    imageAmbEvents,
+    imageWarnings,
     errors: [],
     warnings: validation.warnings,
   };
@@ -1206,10 +1667,14 @@ function formatResult(result: SyncResult): string {
   if (result.status === "error") {
     return `❌ ${result.slug} — ${result.errors.join(", ")}`;
   }
-  if (result.ambEvent) {
-    return `✅ ${result.slug} (30023 + 30142)`;
+  const parts = ["30023"];
+  if (result.ambEvent) parts.push("30142");
+  if (result.imageAmbEvents.length > 0) {
+    parts.push(`${result.imageAmbEvents.length} Bild-AMB`);
   }
-  return `ℹ️  ${result.slug} (30023, kein AMB — type ist nicht LearningResource)`;
+  const prefix = result.ambEvent ? "✅" : "ℹ️ ";
+  const suffix = !result.ambEvent ? " (kein AMB — type ist nicht LearningResource)" : "";
+  return `${prefix} ${result.slug} (${parts.join(" + ")})${suffix}`;
 }
 
 // Main entry point
@@ -1224,10 +1689,11 @@ if (import.meta.main) {
 
   let okCount = 0;
   let ambCount = 0;
+  let imageAmbCount = 0;
   let errorCount = 0;
 
   for (const file of files) {
-    const result = processContent(file, config.pubkey, config.contentRelay, config.ambRelay);
+    const result = await processContent(file, config.pubkey, config.contentRelay, config.ambRelay);
     console.log(formatResult(result));
 
     if (result.warnings.length > 0) {
@@ -1236,23 +1702,33 @@ if (import.meta.main) {
       }
     }
 
+    for (const w of result.imageWarnings) {
+      console.log(`   ⚠️  ${w}`);
+    }
+
     if (config.dryRun && result.articleEvent) {
       console.log(`   30023 tags: ${JSON.stringify(result.articleEvent.tags)}`);
       if (result.ambEvent) {
         console.log(`   30142 tags: ${JSON.stringify(result.ambEvent.tags)}`);
+      }
+      for (const imgEvt of result.imageAmbEvents) {
+        const imgD = imgEvt.tags.find((t) => t[0] === "d")?.[1] ?? "?";
+        console.log(`   30142 (Bild) d: ${imgD}`);
       }
     }
 
     if (result.status === "ok") {
       okCount++;
       if (result.ambEvent) ambCount++;
+      imageAmbCount += result.imageAmbEvents.length;
     } else {
       errorCount++;
     }
   }
 
   console.log(`\n--- Zusammenfassung ---`);
-  console.log(`✅ ${okCount} Events erstellt (davon ${ambCount} mit AMB)`);
+  console.log(`✅ ${okCount} Artikel-Events (davon ${ambCount} mit AMB)`);
+  console.log(`🖼️  ${imageAmbCount} Bild-AMB-Events`);
   if (errorCount > 0) console.log(`❌ ${errorCount} Fehler`);
 
   if (!config.dryRun) {
@@ -1265,24 +1741,24 @@ if (import.meta.main) {
 
 Run: `cd sync && deno test sync_test.ts --allow-read`
 
-Expected: 4 tests pass.
+Expected: 6 tests pass.
 
 - [ ] **Step 9: Run all tests together**
 
 Run: `cd sync && deno test --allow-read`
 
-Expected: All tests pass (4 + 10 + 4 + 8 + 4 = 30 tests).
+Expected: All tests pass (4 + 10 + 4 + 8 + 7 + 8 + 6 = 47 tests).
 
 - [ ] **Step 10: Commit**
 
 ```bash
 git add sync/sync.ts sync/sync_test.ts sync/testdata/
-git commit -m "feat(sync): add sync orchestrator with dry-run and local file discovery"
+git commit -m "feat(sync): add sync orchestrator with image AMB support and dry-run"
 ```
 
 ---
 
-### Task 8: End-to-end dry-run test
+### Task 10: End-to-end dry-run test
 
 **Files:**
 - No new files — manual verification with testdata
@@ -1298,40 +1774,50 @@ Content-Verzeichnis: ./testdata/content
 
 4 Dateien gefunden
 
-✅ test-artikel (30023 + 30142)
+✅ test-artikel (30023 + 30142 + 2 Bild-AMB)
    30023 tags: [["d","test-artikel"],["title","Test Artikel"],...]
    30142 tags: [["d","test-artikel"],["type","LearningResource"],...]
+   30142 (Bild) d: https://oer.community/test-artikel/cover.jpg
+   30142 (Bild) d: https://oer.community/test-artikel/ki-bild.png
+   ⚠️  diagram.png — KEINE .yaml Datei! Fehlende Lizenzangabe!
 ✅ test-article-en (30023 + 30142)
    30023 tags: [...]
    30142 tags: [...]
-ℹ️  impressum (30023, kein AMB — type ist nicht LearningResource)
+ℹ️  impressum (30023) (kein AMB — type ist nicht LearningResource)
    30023 tags: [...]
 ❌ missing-fields/index.md — Pflichtfeld fehlt: id, ...
 
 --- Zusammenfassung ---
-✅ 3 Events erstellt (davon 2 mit AMB)
+✅ 3 Artikel-Events (davon 2 mit AMB)
+🖼️  2 Bild-AMB-Events
 ❌ 1 Fehler
 ```
 
-- [ ] **Step 2: Verify d-tags match expected slugs**
+- [ ] **Step 2: Verify d-tags match expected patterns**
 
 Check that:
-- `test-artikel` d-tag comes from `id: https://oer.community/test-artikel`
-- `test-article-en` d-tag comes from `id: https://oer.community/test-article-en`
-- `impressum` d-tag comes from `id: https://oer.community/impressum`
+- Article d-tags: `test-artikel`, `test-article-en`, `impressum`
+- Image d-tags: `https://oer.community/test-artikel/cover.jpg`, `https://oer.community/test-artikel/ki-bild.png`
+- No image d-tag for `diagram.png` (missing YAML)
 
 - [ ] **Step 3: Verify AMB gating**
 
 Check that:
-- Posts with `type: LearningResource` → both 30023 + 30142
-- Impressum (no type) → only 30023
+- Posts with `type: LearningResource` → 30023 + 30142 (article) + 30142 (images)
+- Impressum (no type) → only 30023, no AMB, no image AMB
 - missing-fields → error, no events
 
-- [ ] **Step 4: Commit final state**
+- [ ] **Step 4: Verify image warnings**
+
+Check that:
+- `diagram.png` generates a warning about missing `.yaml` file
+- `cover.jpg` and `ki-bild.png` generate valid 30142 events
+
+- [ ] **Step 5: Commit final state**
 
 ```bash
 git add -A sync/
-git commit -m "feat(sync): complete dry-run implementation with local file support"
+git commit -m "feat(sync): complete dry-run implementation with article + image AMB support"
 ```
 
 ---
@@ -1345,7 +1831,9 @@ git commit -m "feat(sync): complete dry-run implementation with local file suppo
 | 3 | YAML parser (commonMetadata) | 4 |
 | 4 | Validator | 10 |
 | 5 | Kind 30023 event builder | 4 |
-| 6 | Kind 30142 AMB event builder | 8 |
-| 7 | Sync orchestrator + dry-run | 4 |
-| 8 | E2E verification | manual |
-| **Total** | | **30 tests** |
+| 6 | Kind 30142 AMB event builder (articles) | 8 |
+| 7 | Image YAML sidecar discovery + parsing | 7 |
+| 8 | Kind 30142 image AMB event builder | 8 |
+| 9 | Sync orchestrator + dry-run (with images) | 6 |
+| 10 | E2E verification | manual |
+| **Total** | | **47 tests** |
