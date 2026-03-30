@@ -318,33 +318,50 @@ GET https://oer.community/oercamp-2025/cover.jpg
   → Blossom: GET https://blossom.edufeed.org/<sha256>
 ```
 
-### Bild-Metadaten aus YAML
+### Bild-Metadaten: Ableitung statt extra YAML
 
-Bild-AMB-Events erben Metadaten vom zugehoerigen Artikel:
-- `license` → vom Artikel (oder eigene Bild-Lizenz falls abweichend)
-- `inLanguage` → vom Artikel
-- `datePublished` → vom Artikel
-- `name`, `description` → aus dem `alt`-Text im Markdown oder aus YAML
+Bild-AMB-Events werden **automatisch vom Artikel abgeleitet** — kein zusaetzliches YAML noetig. Das Sync-Script erzeugt pro Artikel bis zu 3 Events:
 
-Offener Punkt: Wie werden bild-spezifische Metadaten (eigener Urheber, abweichende Lizenz) im YAML abgebildet? Moeglicher Ansatz:
+| Event | Wann erstellt | Metadaten-Quelle |
+|-------|--------------|-----------------|
+| Kind 30023 (Content) | Immer | YAML `commonMetadata` + Markdown |
+| Kind 30142 (Artikel-AMB) | Wenn `type: LearningResource` | YAML `commonMetadata` |
+| Kind 30142 (Bild-AMB) | Wenn `image`-Feld vorhanden | Abgeleitet vom Artikel |
 
-```yaml
-images:
-  cover.jpg:
-    name: "Foto vom OERcamp"
-    creator: "Fotografin Name"
-    license: "https://creativecommons.org/licenses/by-sa/4.0/"
+**Abgeleitete Felder fuer Bild-Events:**
+
+| Bild-Event Feld | Quelle | Beispiel |
+|-----------------|--------|---------|
+| `d` | Bild-URL aus `image`-Feld | `https://oer.community/oercamp-2025/cover.jpg` |
+| `type` | Fest | `["type", "LearningResource"], ["type", "Image"]` |
+| `name` | Markdown `alt`-Text, Fallback: Artikeltitel | `"Foto vom OERcamp 2025"` |
+| `description` | Artikel-`description` | |
+| `license:id` | Artikel-`license` | `https://creativecommons.org/licenses/by/4.0/` |
+| `inLanguage` | Artikel-`inLanguage` | `de` |
+| `datePublished` | Artikel-`datePublished` | `2025-06-15` |
+| `creator:name` | Artikel-`creator` | `Joerg Lohrer` |
+| `learningResourceType:id` | Fest | `https://w3id.org/kim/hcrt/image` |
+| `learningResourceType:prefLabel:de` | Fest | `Abbildung` |
+| `learningResourceType:prefLabel:en` | Fest | `Image` |
+| `isAccessibleForFree` | Fest | `true` |
+| `image` | Bild-URL (identisch mit `d`) | `https://oer.community/oercamp-2025/cover.jpg` |
+
+Dieses Format ist kompatibel mit der [oer-finder-plugin Spezifikation](https://github.com/edufeed-org/oer-finder-plugin/blob/main/docs/nostr-events.md).
+
+**Keine d-Tag-Kollision:** Artikel-AMB und Bild-AMB haben verschiedene `d`-Tags:
+```
+Kind 30142, d: "oercamp-2025"                                    ← Artikel
+Kind 30142, d: "https://oer.community/oercamp-2025/cover.jpg"    ← Bild
 ```
 
-Dies ist noch nicht spezifiziert und erfordert eine Erweiterung des YAML-Formats.
+**Ausnahmen (spaeter):** Falls ein Bild eine abweichende Lizenz oder einen eigenen Urheber hat, kann das YAML-Format spaeter um einen optionalen `images`-Block erweitert werden. Fuer den Start reicht die automatische Ableitung.
 
 ## Abgrenzung
 
 | Verantwortung | Zustaendig |
 |---|---|
-| Markdown → Nostr Events (30023, 30142 fuer Artikel) | **md-to-nostr (dieses Script)** |
+| Markdown → Nostr Events (30023, 30142 fuer Artikel + Bilder) | **md-to-nostr (dieses Script)** |
 | Bilder auf Blossom hochladen | **CI-Pipeline (Woodpecker)** |
-| Kind 30142 Events fuer Bilder | **CI-Pipeline oder separates Script** |
 | Events lesen, HTML bauen | **nostrmcp/build** |
 | Bilder ins dist/ kopieren | **CI-Pipeline** |
 | Website deployen (nsyte) | **CI-Pipeline** |
