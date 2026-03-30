@@ -53,12 +53,15 @@ mdparser/
 
 ## Content-Quellen
 
-**Posts:** `content/{lang}/posts/{datum-slug}/index.md`
-- Sprach-spezifische Unterverzeichnisse (`de`, `en`)
+Alle Inhalte liegen unterhalb von `/content/`.
+
+**Posts:** `content/posts/{lang}/{datum-slug}/index.md`
+- Sprach-spezifische Unterverzeichnisse unter `posts/`: `posts/de/`, `posts/en/`
 - Verzeichnisname enthält Datum-Prefix + Slug
 
-**Seiten:** `content/*.md` (Toplevel)
+**Seiten:** `content/{seitenname}/index.md` (direkt in content)
 - Statische Inhaltsseiten (About, Impressum, Kontakt)
+- Eigene Unterverzeichnisse direkt in `content/`, nicht unter `posts/`
 - Ohne Datum, ohne Sprachverzeichnis
 
 Beide verwenden dasselbe YAML-Frontmatter-Format mit `commonMetadata`-Block.
@@ -186,8 +189,8 @@ Replaceable Events (NIP-33): Der Relay akzeptiert nur Events mit höherem `creat
 ```
 1. Config laden (Env-Vars: Relay-URLs, Pubkey, Private Key, Forgejo-Credentials)
 2. Forgejo API: Dateiliste holen
-   ├── content/{lang}/posts/*/index.md  → typ "post"
-   └── content/*.md (Toplevel)          → typ "page"
+   ├── content/posts/{lang}/*/index.md   → typ "post"
+   └── content/{name}/index.md          → typ "page"
 3. Für jede Datei:
    a. Markdown-Inhalt laden (Forgejo API)
    b. YAML-Frontmatter parsen (nur commonMetadata-Block)
