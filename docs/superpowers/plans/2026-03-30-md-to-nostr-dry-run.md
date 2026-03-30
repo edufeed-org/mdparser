@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a Deno-based sync script that reads local Markdown files, extracts commonMetadata, builds Kind 30023 and Kind 30142 Nostr events (for articles AND images), and outputs them as JSON in dry-run mode.
+**Goal:** Build a Deno-based toolchain that (1) validates and fixes YAML frontmatter, (2) generates missing image YAML templates, and (3) builds Kind 30023 + Kind 30142 Nostr events in dry-run mode. Three commands: `validate`, `image-yaml`, `sync`.
 
-**Architecture:** Modular Deno TypeScript — parser extracts YAML frontmatter, separate event builders for 30023 (articles), 30142 (article AMB), and 30142 (image AMB), orchestrator reads local files and pipes through the pipeline. Images get their own `.yaml` sidecar files with metadata. No network access needed for dry-run. Follows wp-to-nostr patterns (env vars, `deno task` commands).
+**Architecture:** Modular Deno TypeScript — shared parser and validator modules used by all three commands. The `validate` command checks and reports on existing YAMLs. The `image-yaml` command generates `.yaml` sidecar templates for images missing them. The `sync` command builds Nostr events from validated content. No network access needed for dry-run. Follows wp-to-nostr patterns (env vars, `deno task` commands).
 
-**Tech Stack:** Deno, TypeScript, `npm:yaml` for YAML parsing, `npm:nostr-tools` for event structure validation.
+**Tech Stack:** Deno, TypeScript, `npm:yaml` for YAML parsing/stringifying, `npm:nostr-tools` for event structure validation.
 
 ---
 
@@ -16,12 +16,19 @@
 sync/
 ├── deno.json              # Deno config, tasks, imports
 ├── config.ts              # Configuration from env vars + defaults
+├── discover.ts            # Content discovery (shared by all commands)
+├── discover_test.ts       # Tests for content discovery
 ├── parser.ts              # YAML frontmatter extraction (commonMetadata only)
 ├── parser_test.ts         # Tests for parser
-├── validator.ts           # Pflichtfeld-Validierung
+├── validator.ts           # Pflichtfeld-Validierung + Konsistenzprüfung
 ├── validator_test.ts      # Tests for validator
 ├── images.ts              # Image YAML sidecar discovery + parsing
 ├── images_test.ts         # Tests for image discovery
+├── commands/
+│   ├── validate.ts        # Command: validate existing YAMLs, report issues
+│   ├── validate_test.ts   # Tests for validate command
+│   ├── image-yaml.ts      # Command: generate missing image YAML templates
+│   └── image-yaml_test.ts # Tests for image-yaml command
 ├── events/
 │   ├── article.ts         # Kind 30023 event builder
 │   ├── article_test.ts    # Tests for article events
@@ -29,7 +36,7 @@ sync/
 │   ├── amb_test.ts        # Tests for article AMB events
 │   ├── image_amb.ts       # Kind 30142 event builder (images)
 │   └── image_amb_test.ts  # Tests for image AMB events
-├── sync.ts                # Main orchestrator (reads files, builds events, outputs)
+├── sync.ts                # Command: sync (reads files, builds events, outputs)
 └── sync_test.ts           # Integration test with fixture files
 ```
 
@@ -64,9 +71,11 @@ sync/testdata/
 ```json
 {
   "tasks": {
+    "validate": "deno run --allow-read --allow-env commands/validate.ts",
+    "image-yaml": "deno run --allow-read --allow-write --allow-env commands/image-yaml.ts",
     "sync": "deno run --allow-read --allow-env sync.ts",
     "dry-run": "DRY_RUN=true deno run --allow-read --allow-env sync.ts",
-    "test": "deno test --allow-read"
+    "test": "deno test --allow-read --allow-write"
   },
   "imports": {
     "yaml": "npm:yaml@^2.4.5",
@@ -475,7 +484,488 @@ git commit -m "feat(sync): add metadata validator with Pflichtfeld checks"
 
 ---
 
-### Task 5: Kind 30023 event builder
+### Task 5: Content discovery module (shared)
+
+**Files:**
+- Create: `sync/discover.ts`
+- Create: `sync/discover_test.ts`
+
+Note: This task requires the testdata fixtures from Task 12. Create the fixture directories and `index.md` files first (Steps 1-4 of Task 12), then return here to test.
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+// sync/discover_test.ts
+import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { discoverContent, type ContentFile } from "./discover.ts";
+
+Deno.test("discoverContent finds posts and pages in testdata", async () => {
+  const files = await discoverContent("./testdata/content");
+
+  const posts = files.filter((f) => f.type === "post");
+  const pages = files.filter((f) => f.type === "page");
+
+  assertEquals(posts.length, 2);
+  assertEquals(pages.length >= 2, true); // impressum + missing-fields
+
+  const dePost = posts.find((f) => f.lang === "de");
+  const enPost = posts.find((f) => f.lang === "en");
+  assertEquals(dePost !== undefined, true);
+  assertEquals(enPost !== undefined, true);
+});
+
+Deno.test("discoverContent returns correct paths for posts", async () => {
+  const files = await discoverContent("./testdata/content");
+  const dePost = files.find((f) => f.lang === "de" && f.type === "post");
+  assertEquals(dePost!.path.endsWith("index.md"), true);
+  assertEquals(dePost!.path.includes("posts/de/"), true);
+});
+
+Deno.test("discoverContent returns correct paths for pages", async () => {
+  const files = await discoverContent("./testdata/content");
+  const impressum = files.find((f) => f.path.includes("impressum"));
+  assertEquals(impressum!.type, "page");
+  assertEquals(impressum!.lang, undefined);
+});
+
+Deno.test("discoverContent skips posts directory as page", async () => {
+  const files = await discoverContent("./testdata/content");
+  const postsPage = files.find((f) => f.type === "page" && f.path.includes("/posts/"));
+  assertEquals(postsPage, undefined);
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd sync && deno test discover_test.ts --allow-read`
+
+Expected: FAIL — `discoverContent` not found.
+
+- [ ] **Step 3: Write discover.ts**
+
+```typescript
+// sync/discover.ts
+
+export interface ContentFile {
+  path: string;
+  type: "post" | "page";
+  lang?: string;
+}
+
+export async function discoverContent(contentDir: string): Promise<ContentFile[]> {
+  const files: ContentFile[] = [];
+
+  // Discover posts: content/posts/{lang}/{slug}/index.md
+  const postsDir = `${contentDir}/posts`;
+  try {
+    for await (const langEntry of Deno.readDir(postsDir)) {
+      if (!langEntry.isDirectory) continue;
+      const lang = langEntry.name;
+      const langDir = `${postsDir}/${lang}`;
+      for await (const postEntry of Deno.readDir(langDir)) {
+        if (!postEntry.isDirectory) continue;
+        const indexPath = `${langDir}/${postEntry.name}/index.md`;
+        try {
+          await Deno.stat(indexPath);
+          files.push({ path: indexPath, type: "post", lang });
+        } catch { /* no index.md, skip */ }
+      }
+    }
+  } catch { /* no posts dir, skip */ }
+
+  // Discover pages: content/{name}/index.md (skip "posts" directory)
+  try {
+    for await (const entry of Deno.readDir(contentDir)) {
+      if (!entry.isDirectory || entry.name === "posts") continue;
+      const indexPath = `${contentDir}/${entry.name}/index.md`;
+      try {
+        await Deno.stat(indexPath);
+        files.push({ path: indexPath, type: "page" });
+      } catch { /* no index.md, skip */ }
+    }
+  } catch { /* content dir issue */ }
+
+  return files;
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `cd sync && deno test discover_test.ts --allow-read`
+
+Expected: 4 tests pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add sync/discover.ts sync/discover_test.ts
+git commit -m "feat(sync): add content discovery module"
+```
+
+---
+
+### Task 6: Validate command — YAML frontmatter validation report
+
+**Files:**
+- Create: `sync/commands/validate.ts`
+- Create: `sync/commands/validate_test.ts`
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+// sync/commands/validate_test.ts
+import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { validateDirectory, type ValidationReport } from "./validate.ts";
+
+Deno.test("validateDirectory reports valid post as ok", async () => {
+  const report = await validateDirectory("../testdata/content");
+  const artikel = report.results.find((r) => r.slug === "test-artikel");
+  assertEquals(artikel !== undefined, true);
+  assertEquals(artikel!.status, "ok");
+  assertEquals(artikel!.errors, []);
+});
+
+Deno.test("validateDirectory reports missing fields as error", async () => {
+  const report = await validateDirectory("../testdata/content");
+  const invalid = report.results.find((r) => r.path.includes("missing-fields"));
+  assertEquals(invalid !== undefined, true);
+  assertEquals(invalid!.status, "error");
+  assertEquals(invalid!.errors.length > 0, true);
+});
+
+Deno.test("validateDirectory checks id/name/description consistency", async () => {
+  const report = await validateDirectory("../testdata/content");
+  const artikel = report.results.find((r) => r.slug === "test-artikel");
+  assertEquals(artikel!.consistencyErrors, []);
+});
+
+Deno.test("validateDirectory counts totals", async () => {
+  const report = await validateDirectory("../testdata/content");
+  assertEquals(report.totalFiles > 0, true);
+  assertEquals(report.validCount + report.errorCount, report.totalFiles);
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd sync && deno test commands/validate_test.ts --allow-read`
+
+Expected: FAIL — `validateDirectory` not found.
+
+- [ ] **Step 3: Write validate.ts**
+
+```typescript
+// sync/commands/validate.ts
+import { loadConfig } from "../config.ts";
+import { discoverContent } from "../discover.ts";
+import { parseMarkdown } from "../parser.ts";
+import { validate } from "../validator.ts";
+import { extractSlug } from "../events/article.ts";
+
+export interface FileValidationResult {
+  path: string;
+  slug: string;
+  status: "ok" | "error";
+  errors: string[];
+  warnings: string[];
+  consistencyErrors: string[];
+  type?: string;
+  hasKeywords: boolean;
+}
+
+export interface ValidationReport {
+  results: FileValidationResult[];
+  totalFiles: number;
+  validCount: number;
+  errorCount: number;
+}
+
+function checkConsistency(metadata: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+  const id = metadata.id as string | undefined;
+  const name = metadata.name as string | undefined;
+  const description = metadata.description as string | undefined;
+
+  // Check id format
+  if (id && !id.startsWith("https://oer.community/")) {
+    errors.push(`id muss mit https://oer.community/ beginnen, ist: ${id}`);
+  }
+
+  // Check datePublished format
+  const dp = metadata.datePublished as string | undefined;
+  if (dp && !/^\d{4}-\d{2}-\d{2}$/.test(dp)) {
+    errors.push(`datePublished muss YYYY-MM-DD sein, ist: ${dp}`);
+  }
+
+  // Check image URL consistency with id
+  const image = metadata.image as string | undefined;
+  if (id && image && !image.startsWith(id)) {
+    errors.push(`image URL (${image}) sollte mit id (${id}) beginnen`);
+  }
+
+  return errors;
+}
+
+export async function validateDirectory(contentDir: string): Promise<ValidationReport> {
+  // Import discoverContent dynamically to avoid circular deps in tests
+  const files = await discoverContent(contentDir);
+  const results: FileValidationResult[] = [];
+
+  for (const file of files) {
+    let markdown: string;
+    try {
+      markdown = Deno.readTextFileSync(file.path);
+    } catch {
+      results.push({
+        path: file.path, slug: file.path, status: "error",
+        errors: ["Datei nicht lesbar"], warnings: [], consistencyErrors: [],
+        hasKeywords: false,
+      });
+      continue;
+    }
+
+    const parsed = parseMarkdown(markdown);
+    if (!parsed) {
+      results.push({
+        path: file.path, slug: file.path, status: "error",
+        errors: ["Kein YAML-Frontmatter gefunden"], warnings: [], consistencyErrors: [],
+        hasKeywords: false,
+      });
+      continue;
+    }
+
+    const validation = validate(parsed.metadata);
+    const consistencyErrors = checkConsistency(parsed.metadata as unknown as Record<string, unknown>);
+    const slug = parsed.metadata.id ? extractSlug(parsed.metadata.id) : file.path;
+    const allErrors = [...validation.errors, ...consistencyErrors];
+
+    results.push({
+      path: file.path,
+      slug,
+      status: allErrors.length === 0 ? "ok" : "error",
+      errors: validation.errors,
+      warnings: validation.warnings,
+      consistencyErrors,
+      type: parsed.metadata.type,
+      hasKeywords: (parsed.metadata.keywords?.length ?? 0) > 0,
+    });
+  }
+
+  const validCount = results.filter((r) => r.status === "ok").length;
+
+  return {
+    results,
+    totalFiles: results.length,
+    validCount,
+    errorCount: results.length - validCount,
+  };
+}
+
+// CLI entry point
+if (import.meta.main) {
+  const config = loadConfig();
+  console.log("YAML Frontmatter Validierung");
+  console.log(`Content-Verzeichnis: ${config.contentDir}\n`);
+
+  const report = await validateDirectory(config.contentDir);
+
+  for (const r of report.results) {
+    if (r.status === "ok") {
+      const typeInfo = r.type === "LearningResource" ? " [LearningResource]" : " [kein AMB]";
+      const kwInfo = r.hasKeywords ? "" : " ⚠️ keine keywords";
+      console.log(`✅ ${r.slug}${typeInfo}${kwInfo}`);
+    } else {
+      console.log(`❌ ${r.slug}`);
+      for (const e of r.errors) console.log(`   Fehler: ${e}`);
+      for (const e of r.consistencyErrors) console.log(`   Konsistenz: ${e}`);
+    }
+    for (const w of r.warnings) console.log(`   ⚠️  ${w}`);
+  }
+
+  console.log(`\n--- Zusammenfassung ---`);
+  console.log(`✅ ${report.validCount} / ${report.totalFiles} valide`);
+  if (report.errorCount > 0) console.log(`❌ ${report.errorCount} mit Fehlern`);
+}
+```
+
+Note: This has a dependency on `discoverContent` from `sync.ts` and `extractSlug` from `events/article.ts`. Since Task 5 runs after Tasks 3-4 but before the event builders, we need `discoverContent` to exist. We'll extract it to a shared module in the sync orchestrator task, or accept the forward dependency — the validate command will be fully testable once sync.ts exists. For now, the test uses the testdata fixtures which are created in Task 9.
+
+**Workaround for forward dependency:** Extract `discoverContent` into its own module. But to keep changes minimal, we'll write validate.ts with the import and test it after sync.ts is created. The test fixtures from Task 7 (image sidecar) are already available.
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `cd sync && deno test commands/validate_test.ts --allow-read`
+
+Expected: 4 tests pass. (Note: requires testdata from Task 9 Step 1-4 to exist. Create those fixture files first if running out of order.)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add sync/commands/validate.ts sync/commands/validate_test.ts
+git commit -m "feat(sync): add validate command for YAML frontmatter checking"
+```
+
+---
+
+### Task 7: Image-yaml command — generate missing sidecar templates
+
+**Files:**
+- Create: `sync/commands/image-yaml.ts`
+- Create: `sync/commands/image-yaml_test.ts`
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+// sync/commands/image-yaml_test.ts
+import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { generateImageYamlTemplate, scanForMissingImageYamls, type MissingImageYaml } from "./image-yaml.ts";
+
+Deno.test("generateImageYamlTemplate creates valid YAML content", () => {
+  const yaml = generateImageYamlTemplate("cover.jpg");
+  assertEquals(yaml.includes("name:"), true);
+  assertEquals(yaml.includes("license:"), true);
+  assertEquals(yaml.includes("TODO"), true);
+  assertEquals(yaml.includes("cover.jpg"), true);
+});
+
+Deno.test("scanForMissingImageYamls finds images without YAML", async () => {
+  const missing = await scanForMissingImageYamls("../testdata/content");
+  // diagram.png in test-artikel has no YAML sidecar
+  const diagram = missing.find((m) => m.filename === "diagram.png");
+  assertEquals(diagram !== undefined, true);
+  assertEquals(diagram!.dirPath.includes("test-artikel"), true);
+});
+
+Deno.test("scanForMissingImageYamls does not report images with existing YAML", async () => {
+  const missing = await scanForMissingImageYamls("../testdata/content");
+  const cover = missing.find((m) => m.filename === "cover.jpg");
+  assertEquals(cover, undefined); // cover.jpg already has cover.jpg.yaml
+});
+
+Deno.test("generateImageYamlTemplate writes to disk in write mode", async () => {
+  const tmpDir = await Deno.makeTempDir();
+  // Create a dummy image
+  await Deno.writeTextFile(`${tmpDir}/test-img.png`, "");
+  const outPath = `${tmpDir}/test-img.png.yaml`;
+
+  const yaml = generateImageYamlTemplate("test-img.png");
+  await Deno.writeTextFile(outPath, yaml);
+
+  const content = await Deno.readTextFile(outPath);
+  assertEquals(content.includes("name:"), true);
+  assertEquals(content.includes("license:"), true);
+
+  // Cleanup
+  await Deno.remove(tmpDir, { recursive: true });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd sync && deno test commands/image-yaml_test.ts --allow-read --allow-write`
+
+Expected: FAIL — `generateImageYamlTemplate` not found.
+
+- [ ] **Step 3: Write image-yaml.ts**
+
+```typescript
+// sync/commands/image-yaml.ts
+import { loadConfig } from "../config.ts";
+import { discoverContent } from "../discover.ts";
+import { discoverImages } from "../images.ts";
+import { stringify } from "yaml";
+
+export interface MissingImageYaml {
+  filename: string;
+  dirPath: string;
+  yamlPath: string;
+}
+
+export function generateImageYamlTemplate(filename: string): string {
+  const template = {
+    name: `TODO: Beschreibung von ${filename}`,
+    description: "TODO: Ausführliche Beschreibung",
+    license: "TODO: https://creativecommons.org/licenses/by/4.0/",
+    creator: {
+      name: "TODO: Name des Urhebers",
+    },
+  };
+
+  return `# Metadaten fuer ${filename}\n# Pflichtfelder: name, license\n# Alle TODO-Eintraege muessen manuell ausgefuellt werden\n${stringify(template)}`;
+}
+
+export async function scanForMissingImageYamls(contentDir: string): Promise<MissingImageYaml[]> {
+  const files = await discoverContent(contentDir);
+  const missing: MissingImageYaml[] = [];
+
+  for (const file of files) {
+    const dirPath = file.path.substring(0, file.path.lastIndexOf("/"));
+    const images = await discoverImages(dirPath);
+
+    for (const img of images) {
+      if (!img.hasYaml) {
+        missing.push({
+          filename: img.filename,
+          dirPath: img.dirPath,
+          yamlPath: `${img.dirPath}/${img.filename}.yaml`,
+        });
+      }
+    }
+  }
+
+  return missing;
+}
+
+// CLI entry point
+if (import.meta.main) {
+  const config = loadConfig();
+  const dryRun = config.dryRun;
+  console.log(`Bild-YAML-Generator${dryRun ? " (DRY RUN)" : ""}`);
+  console.log(`Content-Verzeichnis: ${config.contentDir}\n`);
+
+  const missing = await scanForMissingImageYamls(config.contentDir);
+
+  if (missing.length === 0) {
+    console.log("✅ Alle Bilder haben YAML-Sidecars.");
+    Deno.exit(0);
+  }
+
+  console.log(`${missing.length} Bilder ohne YAML-Sidecar gefunden:\n`);
+
+  for (const m of missing) {
+    if (dryRun) {
+      console.log(`   📝 Würde erstellen: ${m.yamlPath}`);
+    } else {
+      const yaml = generateImageYamlTemplate(m.filename);
+      await Deno.writeTextFile(m.yamlPath, yaml);
+      console.log(`   ✅ Erstellt: ${m.yamlPath}`);
+    }
+  }
+
+  console.log(`\n--- Zusammenfassung ---`);
+  console.log(`📝 ${missing.length} Templates ${dryRun ? "würden erstellt" : "erstellt"}`);
+  if (!dryRun) {
+    console.log("⚠️  Bitte alle TODO-Einträge manuell ausfüllen!");
+  }
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `cd sync && deno test commands/image-yaml_test.ts --allow-read --allow-write`
+
+Expected: 4 tests pass. (Note: requires testdata from Task 9 fixtures.)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add sync/commands/image-yaml.ts sync/commands/image-yaml_test.ts
+git commit -m "feat(sync): add image-yaml command to generate missing sidecar templates"
+```
+
+---
+
+### Task 8: Kind 30023 event builder
 
 **Files:**
 - Create: `sync/events/article.ts`
@@ -647,7 +1137,7 @@ git commit -m "feat(sync): add Kind 30023 article event builder"
 
 ---
 
-### Task 6: Kind 30142 AMB event builder
+### Task 9: Kind 30142 AMB event builder
 
 **Files:**
 - Create: `sync/events/amb.ts`
@@ -889,7 +1379,7 @@ git commit -m "feat(sync): add Kind 30142 AMB event builder with NIP-AMB flatten
 
 ---
 
-### Task 7: Image YAML sidecar discovery and parsing
+### Task 10: Image YAML sidecar discovery and parsing
 
 **Files:**
 - Create: `sync/images.ts`
@@ -1100,7 +1590,7 @@ git commit -m "feat(sync): add image YAML sidecar discovery and parsing"
 
 ---
 
-### Task 8: Kind 30142 image AMB event builder
+### Task 11: Kind 30142 image AMB event builder
 
 **Files:**
 - Create: `sync/events/image_amb.ts`
@@ -1285,7 +1775,7 @@ git commit -m "feat(sync): add Kind 30142 image AMB event builder"
 
 ---
 
-### Task 9: Sync orchestrator with dry-run output (including images)
+### Task 12: Sync orchestrator with dry-run output (including images)
 
 **Files:**
 - Create: `sync/sync.ts`
@@ -1428,7 +1918,8 @@ Inhalt ohne gültiges YAML.
 ```typescript
 // sync/sync_test.ts
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { discoverContent, processContent, type ContentFile, type SyncResult } from "./sync.ts";
+import { discoverContent } from "./discover.ts";
+import { processContent, type SyncResult } from "./sync.ts";
 
 Deno.test("discoverContent finds posts and pages in testdata", async () => {
   const files = await discoverContent("./testdata/content");
@@ -1517,18 +2008,13 @@ Expected: FAIL — `discoverContent` not found.
 ```typescript
 // sync/sync.ts
 import { loadConfig } from "./config.ts";
+import { discoverContent, type ContentFile } from "./discover.ts";
 import { parseMarkdown } from "./parser.ts";
 import { validate } from "./validator.ts";
 import { buildArticleEvent, extractSlug, type UnsignedEvent } from "./events/article.ts";
 import { buildAmbEvent } from "./events/amb.ts";
 import { buildImageAmbEvent } from "./events/image_amb.ts";
 import { discoverImages, parseImageYaml, validateImageMeta } from "./images.ts";
-
-export interface ContentFile {
-  path: string;
-  type: "post" | "page";
-  lang?: string;
-}
 
 export interface SyncResult {
   slug: string;
@@ -1539,42 +2025,6 @@ export interface SyncResult {
   imageWarnings: string[];
   errors: string[];
   warnings: string[];
-}
-
-export async function discoverContent(contentDir: string): Promise<ContentFile[]> {
-  const files: ContentFile[] = [];
-
-  // Discover posts: content/posts/{lang}/{slug}/index.md
-  const postsDir = `${contentDir}/posts`;
-  try {
-    for await (const langEntry of Deno.readDir(postsDir)) {
-      if (!langEntry.isDirectory) continue;
-      const lang = langEntry.name;
-      const langDir = `${postsDir}/${lang}`;
-      for await (const postEntry of Deno.readDir(langDir)) {
-        if (!postEntry.isDirectory) continue;
-        const indexPath = `${langDir}/${postEntry.name}/index.md`;
-        try {
-          await Deno.stat(indexPath);
-          files.push({ path: indexPath, type: "post", lang });
-        } catch { /* no index.md, skip */ }
-      }
-    }
-  } catch { /* no posts dir, skip */ }
-
-  // Discover pages: content/{name}/index.md (skip "posts" directory)
-  try {
-    for await (const entry of Deno.readDir(contentDir)) {
-      if (!entry.isDirectory || entry.name === "posts") continue;
-      const indexPath = `${contentDir}/${entry.name}/index.md`;
-      try {
-        await Deno.stat(indexPath);
-        files.push({ path: indexPath, type: "page" });
-      } catch { /* no index.md, skip */ }
-    }
-  } catch { /* content dir issue */ }
-
-  return files;
 }
 
 export async function processContent(
@@ -1747,7 +2197,7 @@ Expected: 6 tests pass.
 
 Run: `cd sync && deno test --allow-read`
 
-Expected: All tests pass (4 + 10 + 4 + 8 + 7 + 8 + 6 = 47 tests).
+Expected: All tests pass (4 + 10 + 4 + 4 + 4 + 4 + 8 + 7 + 8 + 6 = 59 tests).
 
 - [ ] **Step 10: Commit**
 
@@ -1758,7 +2208,7 @@ git commit -m "feat(sync): add sync orchestrator with image AMB support and dry-
 
 ---
 
-### Task 10: End-to-end dry-run test
+### Task 13: End-to-end dry-run test
 
 **Files:**
 - No new files — manual verification with testdata
@@ -1830,10 +2280,23 @@ git commit -m "feat(sync): complete dry-run implementation with article + image 
 | 2 | Config module | — |
 | 3 | YAML parser (commonMetadata) | 4 |
 | 4 | Validator | 10 |
-| 5 | Kind 30023 event builder | 4 |
-| 6 | Kind 30142 AMB event builder (articles) | 8 |
-| 7 | Image YAML sidecar discovery + parsing | 7 |
-| 8 | Kind 30142 image AMB event builder | 8 |
-| 9 | Sync orchestrator + dry-run (with images) | 6 |
-| 10 | E2E verification | manual |
-| **Total** | | **47 tests** |
+| 5 | Content discovery module (shared) | 4 |
+| 6 | **Validate command** (`deno task validate`) | 4 |
+| 7 | **Image-yaml command** (`deno task image-yaml`) | 4 |
+| 8 | Kind 30023 event builder | 4 |
+| 9 | Kind 30142 AMB event builder (articles) | 8 |
+| 10 | Image YAML sidecar discovery + parsing | 7 |
+| 11 | Kind 30142 image AMB event builder | 8 |
+| 12 | Sync orchestrator + dry-run (with images) | 6 |
+| 13 | E2E verification | manual |
+| **Total** | | **59 tests** |
+
+## Workflow
+
+```
+deno task validate     # Schritt 1: Alle YAMLs prüfen, Bericht ausgeben
+deno task image-yaml   # Schritt 2: Fehlende Bild-YAMLs als Templates generieren
+# → Manuell: TODO-Felder in generierten Templates ausfüllen
+deno task dry-run      # Schritt 3: Events bauen und anzeigen (ohne Publish)
+deno task sync         # Schritt 4: Events bauen und publizieren (live)
+```
