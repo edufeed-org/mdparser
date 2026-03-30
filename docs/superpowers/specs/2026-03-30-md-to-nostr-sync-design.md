@@ -361,6 +361,9 @@ license: "https://creativecommons.org/publicdomain/zero/1.0/"
 | `creator.name` | Empfohlen | Urheber (entfaellt bei CC0/KI) |
 | `creator.id` | Optional | ORCID oder URL des Urhebers |
 | `description` | Optional | Ausfuehrliche Beschreibung |
+| `inLanguage` | Optional | Sprache des Bildinhalts (falls relevant) |
+| `dateCreated` | Optional | Erstellungsdatum (ISO, z.B. `2025-06-15`) |
+| `datePublished` | Optional | Veroeffentlichungsdatum |
 
 ### Validierung und Warnungen
 
@@ -399,8 +402,9 @@ Das Sync-Script erzeugt pro Artikel mehrere Events:
 | `license` | `["license:id", "https://..."]` | Aus YAML |
 | `creator.name` | `["creator:name", "..."]` | Aus YAML |
 | `creator.id` | `["creator:id", "https://..."]` | Aus YAML |
-| (vom Artikel) | `["inLanguage", "de"]` | Vom Artikel erben |
-| (vom Artikel) | `["datePublished", "..."]` | Vom Artikel erben |
+| `inLanguage` | `["inLanguage", "..."]` | Aus YAML (optional) |
+| `dateCreated` | `["dateCreated", "..."]` | Aus YAML (optional) |
+| `datePublished` | `["datePublished", "..."]` | Aus YAML (optional) |
 | — | `["learningResourceType:id", "https://w3id.org/kim/hcrt/image"]` | Fest |
 | — | `["learningResourceType:prefLabel:de", "Abbildung"]` | Fest |
 | — | `["learningResourceType:prefLabel:en", "Image"]` | Fest |
