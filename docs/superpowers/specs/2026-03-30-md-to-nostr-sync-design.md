@@ -113,6 +113,12 @@ keywords: [...]
 Fehlendes Pflichtfeld: Event wird **nicht** erstellt, Warnung im Log.
 Fehlendes optionales Feld: Event wird erstellt, Info im Log.
 
+### AMB-Event-Erstellung (Kind 30142)
+
+Ein Kind 30142 Event wird **nur** erstellt, wenn `type: LearningResource` gesetzt ist. Inhalte ohne diesen Typ (z.B. Impressum, Kontakt, Datenschutz) erhalten nur ein Kind 30023 Event.
+
+Dies erfordert eine redaktionelle Prüfung aller bestehenden Beiträge: Ist `type: LearningResource` inhaltlich korrekt, oder handelt es sich um eine einfache Webseite?
+
 ## d-Tag Strategie
 
 Der `d`-Tag wird aus `commonMetadata.id` abgeleitet — letzter Pfadteil der URL:
@@ -196,8 +202,8 @@ Replaceable Events (NIP-33): Der Relay akzeptiert nur Events mit höherem `creat
    b. YAML-Frontmatter parsen (nur commonMetadata-Block)
    c. Pflichtfelder validieren — bei Fehler: überspringen + Warnung
    d. d-tag aus commonMetadata.id extrahieren (letzter URL-Pfadteil)
-   e. Kind 30023 Event bauen (Content + Tags + AMB-Referenz)
-   f. Kind 30142 Event bauen (AMB-Metadaten geflattened + Content-Referenz)
+   e. Kind 30023 Event bauen (Content + Tags, ggf. AMB-Referenz)
+   f. Falls type == "LearningResource": Kind 30142 Event bauen (AMB-Metadaten geflattened + Content-Referenz)
    g. created_at setzen (Datei-Änderungszeitpunkt)
    h. Events signieren (Private Key)
    i. Publizieren: 30023 → content-relay, 30142 → amb-relay
@@ -211,8 +217,9 @@ Replaceable Events (NIP-33): Der Relay akzeptiert nur Events mit höherem `creat
 ```
 ✅ oep-von-ressourcen-zu-praktiken (30023 + 30142)
 ✅ recap-foerbico-tagung-2026 (30023 + 30142)
-⚠️  about.md — fehlendes Pflichtfeld: datePublished
-❌ impressum.md — fehlendes Pflichtfeld: id, license
+ℹ️  impressum (30023, kein AMB — type ist nicht LearningResource)
+⚠️  about — fehlendes Pflichtfeld: datePublished
+❌ datenschutz — fehlendes Pflichtfeld: id, license
 ```
 
 ## Woodpecker CI Pipeline
@@ -272,4 +279,5 @@ Bevor der Sync produktiv laufen kann:
 1. Alle bestehenden Beiträge mit dem YAML-Frontmatter-Assistenten validieren
 2. `keywords`-Feld in allen Posts ergänzen (falls nur `tags` im staticSiteGenerator vorhanden)
 3. `id`-Feld auf konsistente `https://oer.community/slug`-Form prüfen
-4. Seiten (`content/*.md`) mit vollständigem commonMetadata-Block versehen
+4. Seiten (`content/{name}/index.md`) mit vollständigem commonMetadata-Block versehen
+5. **Redaktionelle Prüfung `type`-Feld:** Für jeden Inhalt entscheiden ob `type: LearningResource` korrekt ist (→ bekommt 30142 AMB-Event) oder ob es eine einfache Webseite ist (→ nur 30023)
