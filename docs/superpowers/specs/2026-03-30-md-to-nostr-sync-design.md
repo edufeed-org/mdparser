@@ -318,33 +318,94 @@ GET https://oer.community/oercamp-2025/cover.jpg
   → Blossom: GET https://blossom.edufeed.org/<sha256>
 ```
 
-### Bild-Metadaten: Ableitung statt extra YAML
+### Bild-Metadaten: Eigenes YAML pro Bild
 
-Bild-AMB-Events werden **automatisch vom Artikel abgeleitet** — kein zusaetzliches YAML noetig. Das Sync-Script erzeugt pro Artikel bis zu 3 Events:
+Jedes Bild hat eigene Metadaten (Urheber, Lizenz), die sich vom Artikel unterscheiden koennen. Bilder koennen von externen Fotografen stammen, unterschiedlich lizenziert sein, oder KI-generiert sein (CC0). Deshalb erhaelt jedes Bild eine **eigene YAML-Datei** mit dem gleichen Dateinamen plus `.yaml`-Endung:
+
+```
+content/de/posts/oercamp-2025/
+├── index.md
+├── cover.jpg
+├── cover.jpg.yaml           ← Metadaten fuer cover.jpg
+├── workshop-foto.jpg
+├── workshop-foto.jpg.yaml   ← Metadaten fuer workshop-foto.jpg
+├── ki-generated.png
+└── ki-generated.png.yaml    ← Metadaten fuer ki-generated.png
+```
+
+**YAML-Format pro Bild (AMB/Schema.org-konform):**
+
+```yaml
+# cover.jpg.yaml
+name: "Teilnehmende am OERcamp 2025"
+description: "Gruppenfoto der Teilnehmenden"
+creator:
+  name: "Fotografin Schmidt"
+  id: "https://orcid.org/0000-0001-2345-6789"
+license: "https://creativecommons.org/licenses/by-sa/4.0/"
+```
+
+```yaml
+# ki-generated.png.yaml
+name: "KI-generierte Illustration zum Thema OER"
+description: "Erstellt mit Gemini ImageFX"
+license: "https://creativecommons.org/publicdomain/zero/1.0/"
+```
+
+**Pflichtfelder pro Bild-YAML:**
+
+| Feld | Pflicht | Beschreibung |
+|------|---------|-------------|
+| `name` | Ja | Bildtitel/Beschreibung |
+| `license` | Ja | Lizenz-URL (CC-BY, CC-BY-SA, CC0, etc.) |
+| `creator.name` | Empfohlen | Urheber (entfaellt bei CC0/KI) |
+| `creator.id` | Optional | ORCID oder URL des Urhebers |
+| `description` | Optional | Ausfuehrliche Beschreibung |
+
+### Validierung und Warnungen
+
+Das Sync-Script prueft fuer jedes Bild im Verzeichnis:
+
+```
+✅ cover.jpg — cover.jpg.yaml vorhanden, Lizenz: CC-BY-SA-4.0 → Kind 30142
+✅ ki-generated.png — ki-generated.png.yaml vorhanden, Lizenz: CC0 → Kind 30142
+⚠️  workshop-foto.jpg — KEINE .yaml Datei! Fehlende Lizenzangabe!
+⚠️  diagram.png — diagram.png.yaml vorhanden, aber Pflichtfeld 'license' fehlt!
+```
+
+**Bild ohne YAML:** Warnung "fehlende Lizenzangabe" + kein Kind 30142 Event. Das Bild wird trotzdem ins dist/ kopiert und deployed, aber ohne AMB-Metadaten.
+
+**YAML ohne Lizenz:** Warnung "Pflichtfeld license fehlt" + kein Kind 30142 Event.
+
+### Event-Erzeugung pro Artikel
+
+Das Sync-Script erzeugt pro Artikel mehrere Events:
 
 | Event | Wann erstellt | Metadaten-Quelle |
 |-------|--------------|-----------------|
 | Kind 30023 (Content) | Immer | YAML `commonMetadata` + Markdown |
 | Kind 30142 (Artikel-AMB) | Wenn `type: LearningResource` | YAML `commonMetadata` |
-| Kind 30142 (Bild-AMB) | Wenn `image`-Feld vorhanden | Abgeleitet vom Artikel |
+| Kind 30142 (Bild-AMB) | Pro Bild mit gueltigem `.yaml` | `<bild>.yaml` Datei |
 
-**Abgeleitete Felder fuer Bild-Events:**
+**Mapping Bild-YAML → Kind 30142 Tags:**
 
-| Bild-Event Feld | Quelle | Beispiel |
-|-----------------|--------|---------|
-| `d` | Bild-URL aus `image`-Feld | `https://oer.community/oercamp-2025/cover.jpg` |
-| `type` | Fest | `["type", "LearningResource"], ["type", "Image"]` |
-| `name` | Markdown `alt`-Text, Fallback: Artikeltitel | `"Foto vom OERcamp 2025"` |
-| `description` | Artikel-`description` | |
-| `license:id` | Artikel-`license` | `https://creativecommons.org/licenses/by/4.0/` |
-| `inLanguage` | Artikel-`inLanguage` | `de` |
-| `datePublished` | Artikel-`datePublished` | `2025-06-15` |
-| `creator:name` | Artikel-`creator` | `Joerg Lohrer` |
-| `learningResourceType:id` | Fest | `https://w3id.org/kim/hcrt/image` |
-| `learningResourceType:prefLabel:de` | Fest | `Abbildung` |
-| `learningResourceType:prefLabel:en` | Fest | `Image` |
-| `isAccessibleForFree` | Fest | `true` |
-| `image` | Bild-URL (identisch mit `d`) | `https://oer.community/oercamp-2025/cover.jpg` |
+| YAML-Feld | Nostr Tag | Beispiel |
+|-----------|-----------|---------|
+| (Dateiname + Slug) | `["d", "https://oer.community/slug/bild.jpg"]` | Aus Pfad abgeleitet |
+| — | `["type", "LearningResource"]` | Fest |
+| — | `["type", "Image"]` | Fest |
+| `name` | `["name", "..."]` | Aus YAML |
+| `description` | `["description", "..."]` | Aus YAML |
+| `license` | `["license:id", "https://..."]` | Aus YAML |
+| `creator.name` | `["creator:name", "..."]` | Aus YAML |
+| `creator.id` | `["creator:id", "https://..."]` | Aus YAML |
+| (vom Artikel) | `["inLanguage", "de"]` | Vom Artikel erben |
+| (vom Artikel) | `["datePublished", "..."]` | Vom Artikel erben |
+| — | `["learningResourceType:id", "https://w3id.org/kim/hcrt/image"]` | Fest |
+| — | `["learningResourceType:prefLabel:de", "Abbildung"]` | Fest |
+| — | `["learningResourceType:prefLabel:en", "Image"]` | Fest |
+| — | `["isAccessibleForFree", "true"]` | Fest |
+| (Dateiname + Slug) | `["image", "https://oer.community/slug/bild.jpg"]` | Aus Pfad abgeleitet |
 
 Dieses Format ist kompatibel mit der [oer-finder-plugin Spezifikation](https://github.com/edufeed-org/oer-finder-plugin/blob/main/docs/nostr-events.md).
 
@@ -353,8 +414,6 @@ Dieses Format ist kompatibel mit der [oer-finder-plugin Spezifikation](https://g
 Kind 30142, d: "oercamp-2025"                                    ← Artikel
 Kind 30142, d: "https://oer.community/oercamp-2025/cover.jpg"    ← Bild
 ```
-
-**Ausnahmen (spaeter):** Falls ein Bild eine abweichende Lizenz oder einen eigenen Urheber hat, kann das YAML-Format spaeter um einen optionalen `images`-Block erweitert werden. Fuer den Start reicht die automatische Ableitung.
 
 ## Abgrenzung
 
@@ -378,4 +437,5 @@ Bevor der Sync produktiv laufen kann:
 4. Seiten (`content/{name}/index.md`) mit vollstaendigem commonMetadata-Block versehen
 5. **Redaktionelle Pruefung `type`-Feld:** Fuer jeden Inhalt entscheiden ob `type: LearningResource` korrekt ist (→ bekommt 30142 AMB-Event) oder ob es eine einfache Webseite ist (→ nur 30023)
 6. **Blossom-Server auswaehlen** und Zugangstoken fuer CI konfigurieren
-7. **Bild-Metadaten pruefen:** Lizenz- und Urheberangaben fuer Bilder klaeren
+7. **Bild-YAML-Dateien erstellen:** Fuer jedes Bild in `content/` eine `<bild>.yaml` Datei mit `name`, `license` und `creator` anlegen
+8. **Bild-Lizenzen klaeren:** Insbesondere KI-generierte Bilder (CC0), externe Bilder (Lizenz pruefen), eigene Fotos (CC-BY oder CC-BY-SA)
