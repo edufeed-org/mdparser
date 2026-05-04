@@ -4,10 +4,10 @@ import { parseMarkdown, validateRequired } from './core/parser.ts'
 import { buildArticleEvent } from './events/article.ts'
 import { buildAmbEvent } from './events/amb.ts'
 import { createBunkerSigner } from './core/signer.ts'
-import { publishEvent } from './core/relays.ts'
+import { AMB_RELAYS, ARTICLE_RELAYS, publishToRelays } from './core/relays.ts'
 
-const CONTENT_RELAY = 'wss://relay-rpi.edufeed.org/'
-const AMB_RELAY = 'wss://amb-relay.edufeed.org/'
+const ARTICLE_HINT_RELAY = ARTICLE_RELAYS[0]
+const AMB_HINT_RELAY = AMB_RELAYS[0]
 
 interface CliArgs {
   'dry-run'?: boolean
@@ -61,9 +61,14 @@ async function main() {
     console.log(`Datei: ${path}`)
     console.log(`Pubkey (placeholder): ${fallbackPubkey}\n`)
 
-    const article = buildArticleEvent(parsed.metadata, parsed.content, fallbackPubkey, AMB_RELAY)
+    const article = buildArticleEvent(
+      parsed.metadata,
+      parsed.content,
+      fallbackPubkey,
+      AMB_HINT_RELAY,
+    )
     const amb = parsed.metadata.type === 'LearningResource'
-      ? buildAmbEvent(parsed.metadata, fallbackPubkey, CONTENT_RELAY)
+      ? buildAmbEvent(parsed.metadata, fallbackPubkey, ARTICLE_HINT_RELAY)
       : null
 
     console.log('--- Kind 30023 (Content, Long-form) ---')
@@ -81,9 +86,13 @@ async function main() {
       identifier: dTag,
       pubkey: fallbackPubkey,
       kind: 30023,
-      relays: [CONTENT_RELAY],
+      relays: [ARTICLE_HINT_RELAY],
     })
     console.log(`\nVoraussichtliche naddr (mit fallback-pubkey): ${naddrPreview}`)
+    console.log(`\nWürde publishen an Article-Relays: ${ARTICLE_RELAYS.join(', ')}`)
+    if (amb) {
+      console.log(`Würde publishen an AMB-Relays: ${AMB_RELAYS.join(', ')}`)
+    }
     return
   }
 
@@ -103,9 +112,9 @@ async function main() {
   const pubkey = await signer.getPublicKey()
   console.log(`Bunker-Pubkey: ${pubkey}\n`)
 
-  const article = buildArticleEvent(parsed.metadata, parsed.content, pubkey, AMB_RELAY)
+  const article = buildArticleEvent(parsed.metadata, parsed.content, pubkey, AMB_HINT_RELAY)
   const amb = parsed.metadata.type === 'LearningResource'
-    ? buildAmbEvent(parsed.metadata, pubkey, CONTENT_RELAY)
+    ? buildAmbEvent(parsed.metadata, pubkey, ARTICLE_HINT_RELAY)
     : null
 
   console.log('Signiere Kind 30023…')
@@ -119,14 +128,18 @@ async function main() {
     console.log(`  id=${signedAmb.id.slice(0, 16)}…`)
   }
 
-  console.log(`\nPublish 30023 → ${CONTENT_RELAY}`)
-  const r1 = await publishEvent(CONTENT_RELAY, signedArticle)
-  console.log(`  ${r1.ok ? '✅' : '❌'} ${r1.message ?? ''}`)
+  console.log(`\nPublish 30023 → ${ARTICLE_RELAYS.length} Article-Relays`)
+  const articleResults = await publishToRelays(ARTICLE_RELAYS, signedArticle)
+  for (const r of articleResults) {
+    console.log(`  ${r.ok ? '✅' : '❌'} ${r.relay} ${r.message ?? ''}`)
+  }
 
   if (signedAmb) {
-    console.log(`Publish 30142 → ${AMB_RELAY}`)
-    const r2 = await publishEvent(AMB_RELAY, signedAmb)
-    console.log(`  ${r2.ok ? '✅' : '❌'} ${r2.message ?? ''}`)
+    console.log(`\nPublish 30142 → ${AMB_RELAYS.length} AMB-Relay(s)`)
+    const ambResults = await publishToRelays(AMB_RELAYS, signedAmb)
+    for (const r of ambResults) {
+      console.log(`  ${r.ok ? '✅' : '❌'} ${r.relay} ${r.message ?? ''}`)
+    }
   }
 
   const dTag = signedArticle.tags.find((t) => t[0] === 'd')?.[1] ?? ''
@@ -134,7 +147,7 @@ async function main() {
     identifier: dTag,
     pubkey,
     kind: 30023,
-    relays: [CONTENT_RELAY],
+    relays: [ARTICLE_HINT_RELAY],
   })
   console.log(`\n=== Adresse für Kommentare ===`)
   console.log(`naddr: ${naddr}`)
