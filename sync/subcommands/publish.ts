@@ -15,6 +15,7 @@ import {
 import { createBunkerSigner, type Signer } from '../core/signer.ts'
 import { buildArticleEvent } from '../events/article.ts'
 import { buildAmbEvent } from '../events/amb.ts'
+import { createLogger } from '../core/log.ts'
 
 const ARTICLE_HINT_RELAY = ARTICLE_RELAYS[0]
 const AMB_HINT_RELAY = AMB_RELAYS[0]
@@ -212,11 +213,15 @@ export async function runPublish(args: string[]): Promise<number> {
 
   const dryRun = flags['dry-run'] === true
   const cfg = loadConfig()
+  const mode = flags['force-all']
+    ? 'force-all'
+    : flags.post
+    ? `single (${flags.post})`
+    : 'diff'
+  const logger = createLogger({ mode, contentRoot: cfg.contentRoot })
 
   console.log('=== publish ===')
-  console.log(`mode:       ${
-    flags['force-all'] ? 'force-all' : flags.post ? `single (${flags.post})` : 'diff'
-  }`)
+  console.log(`mode:       ${mode}`)
   console.log(`dry-run:    ${dryRun}`)
   console.log(`contentRoot:${cfg.contentRoot}`)
 
@@ -248,6 +253,7 @@ export async function runPublish(args: string[]): Promise<number> {
   for (const file of files) {
     const r = await processPost(file, { cfg, dryRun, signer })
     results.push(r)
+    logger.record(r)
     console.log(`${statusEmoji(r.status)} ${r.file.lang}/${r.file.slug}`)
     if (r.reason) console.log(`   ${r.reason}`)
     if (r.articleAcks && !dryRun) {
@@ -281,7 +287,17 @@ export async function runPublish(args: string[]): Promise<number> {
   }
   console.log(`\nSummary: ok=${counts.ok}  skipped=${counts.skipped}  failed=${counts.failed}`)
 
-  return counts.failed > 0 ? 1 : 0
+  const exitCode = counts.failed > 0 ? 1 : 0
+  try {
+    const logFile = await logger.finish(exitCode)
+    console.log(`Log:     ${logFile}`)
+  } catch (err) {
+    console.error(`Log konnte nicht geschrieben werden: ${
+      err instanceof Error ? err.message : String(err)
+    }`)
+  }
+
+  return exitCode
 }
 
 async function readDTag(path: string): Promise<string | undefined> {
