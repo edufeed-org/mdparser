@@ -361,7 +361,7 @@ jobs:
       - name: Checkout mdparser
         uses: actions/checkout@v4
         with:
-          repository: rpi-virtuell/mdparser   # oder wo auch immer der Mirror liegt
+          repository: edufeed-org/mdparser
           path: mdparser
           ref: main
 
@@ -402,19 +402,15 @@ jobs:
           retention-days: 30
 ```
 
-**Offen — vor diesem Task klären:**
-- Wo liegt der mdparser-Mirror, von dem die Action ihn checkout'et? Oder soll mdparser-Code als Git-Submodule im content-Repo liegen?
-- Welcher Branch ist Push-Trigger im Mirror — `main`?
-
-Secrets setzen:
-- `BUNKER_URL` — derselbe wie lokal in `mdparser/.env`
+**Secrets im Mirror-Repo `rpi-virtuell/FOERBICO_und_rpi-virtuell` setzen:**
+- `BUNKER_URL` — derselbe wie lokal in `mdparser/.env` (Pairing-URL aus Amber)
 - `AUTHOR_PUBKEY_HEX` — `5a12b41ec15b466321e88c371be2dc47d9193f9c8bba4ab09fc50045bd35aedf`
-- `CLIENT_SECRET_HEX` — derselbe wie lokal (oder eigener für CI? — Diskussion: gleicher Key bedeutet, dass CI und Lokal als „dieselbe App" in Amber erscheinen, was dedupliziert. Eigener Key heißt extra Approval beim ersten CI-Run.)
+- `CLIENT_SECRET_HEX` — **eigener Key für CI** (mit `openssl rand -hex 32` neu erzeugen, nicht den lokalen wiederverwenden). Beim ersten CI-Run erscheint in Amber ein neuer App-Approval — einmalig „always allow".
 
-- [ ] **Step 1:** Mit Jörg klären: mdparser-Quelle für die Action.
-- [ ] **Step 2:** Workflow-File schreiben.
-- [ ] **Step 3:** Secrets im Mirror-Repo eintragen.
-- [ ] **Step 4:** `workflow_dispatch` mit `force_all=false` als Smoke-Test (geht durch wenn der letzte Push keine Posts geändert hat → leerer Publish-Lauf, aber check ok).
+- [ ] **Step 1:** Workflow-File schreiben.
+- [ ] **Step 2:** Secrets im Mirror-Repo eintragen.
+- [ ] **Step 3:** `workflow_dispatch` mit `force_all=false` als Smoke-Test (geht durch wenn der letzte Push keine Posts geändert hat → leerer Publish-Lauf, aber check ok).
+- [ ] **Step 4:** Erste CI-Approval in Amber (neuer App-Eintrag mit eigenem CI-Client-Pubkey) bestätigen mit „always allow".
 - [ ] **Step 5:** Live-Smoke: einen Post im Mirror ändern, push, beobachten.
 
 ---
@@ -450,8 +446,8 @@ Spec sagt Woodpecker primär. Wenn die GitHub-Action auf dem Mirror funktioniert
 - Pro Task ein Commit. Tests laufen vor jedem Commit grün.
 - Keine Mock-Bunker — Live-Tests immer gegen echten Amber.
 
-## Klärungspunkte vor Start
+## Geklärt vor Start (2026-05-04)
 
-1. **mdparser-Mirror auf GitHub:** Wo lebt der Code, den die Action checkout'et? Optionen: a) GitHub-Mirror von `git.rpi-virtuell.de/Comenius-Institut/mdparser`, b) Submodule im Content-Repo, c) eigener Push der `sync/`-Sources ins Content-Repo.
-2. **CLIENT_SECRET_HEX in CI:** derselbe wie lokal (Amber dedupliziert) oder eigener (extra App-Eintrag in Amber)?
-3. **`MIN_RELAY_ACKS`:** für 30023 mit 4 Relays — sinnvoll 2? Bei 1 funktioniert es auch wenn 3 Relays down sind, was robust ist.
+1. **mdparser-Quelle für die Action:** `github.com/edufeed-org/mdparser` — Push-Mirror von Forgejo via PAT, eingerichtet 2026-05-04. Action zieht den Code per `actions/checkout` aus diesem Mirror.
+2. **CLIENT_SECRET_HEX in CI:** **eigener Key** für die Action (separater App-Eintrag in Amber, bei erstem CI-Lauf einmalig „always allow" bestätigen). Lokaler Key bleibt unverändert.
+3. **`MIN_RELAY_ACKS` für 30023:** **2** — robust gegen einzelne Relay-Ausfälle, nicht zu strikt.
