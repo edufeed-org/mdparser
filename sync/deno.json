@@ -1,0 +1,22 @@
+{
+  "tasks": {
+    "dry-run-single": "deno run --env-file=../.env --allow-env --allow-read publish-single.ts --dry-run",
+    "publish-single": "deno run --env-file=../.env --allow-env --allow-read --allow-net publish-single.ts"
+  },
+  "imports": {
+    "yaml": "npm:yaml@^2.4.5",
+    "nostr-tools": "npm:nostr-tools@^2.10.4",
+    "applesauce-signers": "npm:applesauce-signers@^2.0.0",
+    "applesauce-relay": "npm:applesauce-relay@^2.0.0",
+    "rxjs": "npm:rxjs@^7.8.1"
+  },
+  "compilerOptions": {
+    "strict": true
+  },
+  "fmt": {
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "semiColons": false,
+    "singleQuote": true
+  }
+}
