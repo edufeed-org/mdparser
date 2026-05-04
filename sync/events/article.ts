@@ -1,5 +1,5 @@
-import type { CommonMetadata } from '../parser.ts'
-import { extractSlug } from '../parser.ts'
+import type { CommonMetadata } from '../core/parser.ts'
+import { extractSlug } from '../core/parser.ts'
 
 export interface UnsignedEvent {
   kind: number

@@ -1,10 +1,10 @@
 import { parseArgs } from 'jsr:@std/cli@^1.0.6/parse-args'
 import { nip19 } from 'nostr-tools'
-import { parseMarkdown, validateRequired } from './parser.ts'
+import { parseMarkdown, validateRequired } from './core/parser.ts'
 import { buildArticleEvent } from './events/article.ts'
 import { buildAmbEvent } from './events/amb.ts'
-import { createBunkerSigner } from './signer.ts'
-import { publishEvent } from './relay.ts'
+import { createBunkerSigner } from './core/signer.ts'
+import { publishEvent } from './core/relays.ts'
 
 const CONTENT_RELAY = 'wss://relay-rpi.edufeed.org/'
 const AMB_RELAY = 'wss://amb-relay.edufeed.org/'

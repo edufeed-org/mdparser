@@ -1,5 +1,5 @@
-import type { CommonMetadata } from '../parser.ts'
-import { extractSlug } from '../parser.ts'
+import type { CommonMetadata } from '../core/parser.ts'
+import { extractSlug } from '../core/parser.ts'
 import type { UnsignedEvent } from './article.ts'
 
 export function buildAmbEvent(

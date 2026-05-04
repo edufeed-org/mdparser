@@ -1,6 +1,6 @@
 import { NostrConnectSigner, SimpleSigner } from 'applesauce-signers'
 import { RelayPool } from 'applesauce-relay'
-import type { UnsignedEvent } from './events/article.ts'
+import type { UnsignedEvent } from '../events/article.ts'
 
 export interface SignedEvent extends UnsignedEvent {
   id: string
