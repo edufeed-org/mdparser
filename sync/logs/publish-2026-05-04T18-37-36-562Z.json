@@ -1,0 +1,54 @@
+{
+  "runId": "2026-05-04T18-37-36-562Z",
+  "mode": "single (2025-12-12-InterviewOtto)",
+  "startedAt": "2026-05-04T18:37:36.562Z",
+  "finishedAt": "2026-05-04T18:37:40.004Z",
+  "contentRoot": "content",
+  "posts": [
+    {
+      "slug": "2025-12-12-InterviewOtto",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-12-12-InterviewOtto/index.md",
+      "status": "ok",
+      "articleEventId": "62653c977f2477542df67aa0474e245a11d893b9f467e397149ae1a65f95dfa6",
+      "ambEventId": "8c9c2c88564998301a40d718e94bc7280f5552734a1be4a545ff5d540e710846",
+      "articleAcks": [
+        {
+          "relay": "wss://relay-rpi.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.primal.net/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://theforest.nostr1.com/",
+          "ok": false,
+          "message": ""
+        }
+      ],
+      "ambAcks": [
+        {
+          "relay": "wss://amb-relay.edufeed.org/",
+          "ok": true,
+          "message": ""
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "ok": 1,
+    "skipped": 0,
+    "failed": 0,
+    "total": 1
+  },
+  "exitCode": 0
+}

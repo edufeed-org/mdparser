@@ -1,0 +1,46 @@
+{
+  "runId": "2026-05-04T18-37-54-599Z",
+  "mode": "single (2026-01-28)",
+  "startedAt": "2026-05-04T18:37:54.599Z",
+  "finishedAt": "2026-05-04T18:37:57.184Z",
+  "contentRoot": "content",
+  "posts": [
+    {
+      "slug": "2026-01-28",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-01-28/index.md",
+      "status": "ok",
+      "articleEventId": "2725fb8ad919885104e395aeb3a3b632de18fb624bceec65c05ba486a34802b2",
+      "articleAcks": [
+        {
+          "relay": "wss://relay-rpi.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.primal.net/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://theforest.nostr1.com/",
+          "ok": false,
+          "message": ""
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "ok": 1,
+    "skipped": 0,
+    "failed": 0,
+    "total": 1
+  },
+  "exitCode": 0
+}

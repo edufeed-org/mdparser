@@ -24,13 +24,9 @@
 Thumbs.db
 
 # Logs / Run-Artifacts
-logs/
 *.log
 
 # Temporary files
 tmp/
 temp/
 *.tmp
-
-# Sync-Module Output (lokal generiert)
-sync/logs/

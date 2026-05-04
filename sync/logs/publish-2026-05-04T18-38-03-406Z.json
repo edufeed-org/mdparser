@@ -1,0 +1,54 @@
+{
+  "runId": "2026-05-04T18-38-03-406Z",
+  "mode": "single (2026-02-04-loewe-von-juda)",
+  "startedAt": "2026-05-04T18:38:03.406Z",
+  "finishedAt": "2026-05-04T18:38:06.945Z",
+  "contentRoot": "content",
+  "posts": [
+    {
+      "slug": "2026-02-04-loewe-von-juda",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-02-04-loewe-von-juda/index.md",
+      "status": "ok",
+      "articleEventId": "113e0af0cf74c9ea5202a7132f4e5a66322c15eefced07cb0bbb9a22105a23ae",
+      "ambEventId": "cc6f5f0ee6ba945b9b96e8d0bba7b34f04f54ac81f633daf0ffbd68246d8358e",
+      "articleAcks": [
+        {
+          "relay": "wss://relay-rpi.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.primal.net/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://theforest.nostr1.com/",
+          "ok": false,
+          "message": ""
+        }
+      ],
+      "ambAcks": [
+        {
+          "relay": "wss://amb-relay.edufeed.org/",
+          "ok": true,
+          "message": ""
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "ok": 1,
+    "skipped": 0,
+    "failed": 0,
+    "total": 1
+  },
+  "exitCode": 0
+}

@@ -1,4 +1,4 @@
-import { join } from 'jsr:@std/path@^1.0.0'
+import { basename, join, relative } from 'jsr:@std/path@^1.0.0'
 import type { PostResult, PostStatus } from '../subcommands/publish.ts'
 
 export interface PostLog {
@@ -40,12 +40,12 @@ function isoCompact(d: Date): string {
   return d.toISOString().replace(/[:.]/g, '-')
 }
 
-function toPostLog(r: PostResult): PostLog {
+function toPostLog(r: PostResult, contentRoot: string): PostLog {
   return {
     slug: r.file.slug,
     lang: r.file.lang,
     type: r.file.type,
-    path: r.file.path,
+    path: relative(contentRoot, r.file.path),
     status: r.status,
     reason: r.reason,
     articleEventId: r.articleEventId,
@@ -64,10 +64,11 @@ export function createLogger(opts: LoggerOpts): Logger {
   const runId = isoCompact(startedAt)
   const logDir = opts.logDir ?? './logs'
   const posts: PostLog[] = []
+  const contentRootLabel = basename(opts.contentRoot.replace(/\/+$/, ''))
 
   return {
     record(result: PostResult) {
-      posts.push(toPostLog(result))
+      posts.push(toPostLog(result, opts.contentRoot))
     },
     async finish(exitCode: number): Promise<string> {
       const finishedAt = new Date()
@@ -76,7 +77,7 @@ export function createLogger(opts: LoggerOpts): Logger {
         mode: opts.mode,
         startedAt: startedAt.toISOString(),
         finishedAt: finishedAt.toISOString(),
-        contentRoot: opts.contentRoot,
+        contentRoot: contentRootLabel,
         posts,
         counts: {
           ok: posts.filter((p) => p.status === 'ok').length,

@@ -1,0 +1,46 @@
+{
+  "runId": "2026-05-04T18-38-14-405Z",
+  "mode": "single (2026-02-18-Interview-reliGlobal)",
+  "startedAt": "2026-05-04T18:38:14.405Z",
+  "finishedAt": "2026-05-04T18:38:17.060Z",
+  "contentRoot": "content",
+  "posts": [
+    {
+      "slug": "2026-02-18-Interview-reliGlobal",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-02-18-Interview-reliGlobal/index.md",
+      "status": "ok",
+      "articleEventId": "76bb1b20ae2b6a7abebd78c73c2ef9e15ad76748062deaedcd11f55858940122",
+      "articleAcks": [
+        {
+          "relay": "wss://relay-rpi.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.primal.net/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://theforest.nostr1.com/",
+          "ok": false,
+          "message": ""
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "ok": 1,
+    "skipped": 0,
+    "failed": 0,
+    "total": 1
+  },
+  "exitCode": 0
+}

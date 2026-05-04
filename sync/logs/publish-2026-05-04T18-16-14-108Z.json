@@ -1,0 +1,704 @@
+{
+  "runId": "2026-05-04T18-16-14-108Z",
+  "mode": "force-all",
+  "startedAt": "2026-05-04T18:16:14.108Z",
+  "finishedAt": "2026-05-04T18:16:14.168Z",
+  "contentRoot": "content",
+  "posts": [
+    {
+      "slug": "datenschutz",
+      "lang": "de",
+      "type": "page",
+      "path": "de/datenschutz/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "impressum",
+      "lang": "de",
+      "type": "page",
+      "path": "de/impressum/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "oer-und-oep",
+      "lang": "de",
+      "type": "page",
+      "path": "de/oer-und-oep/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "oer-und-oep/lernmodul",
+      "lang": "de",
+      "type": "page",
+      "path": "de/oer-und-oep/lernmodul/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "2024-08-05-hello-world",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-08-05-hello-world/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-08-09-sdg-logos",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-08-09-sdg-logos/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-08-15-OER-im-Blick",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-08-15-OER-im-Blick/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-09-02-blog_its_jointly_2024",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-02-blog_its_jointly_2024/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-09-03-OER-Fachtag-Orca.NRW",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-03-OER-Fachtag-Orca.NRW/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-09-04-OER-erklaert",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-04-OER-erklaert/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-09-06-OERcamp-Hamburg",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-06-OERcamp-Hamburg/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-09-11-OER-Brownbag",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-11-OER-Brownbag/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, keywords"
+    },
+    {
+      "slug": "2024-09-15-pirner-oer-youtube",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-15-pirner-oer-youtube/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-09-16-Raus-aus-den-Bubbles",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-16-Raus-aus-den-Bubbles/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-09-17-GwR-Tagung",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-17-GwR-Tagung/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-09-18-TikTok",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-09-18-TikTok/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (theologie-auf-tiktok-religioese-kommunikation-im-digitalen-raum) + 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2024-10-02-AKRK",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-10-02-AKRK/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-10-07-DisKursLab",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-10-07-DisKursLab/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-10-14-OERinfo-Fachtag",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-10-14-OERinfo-Fachtag/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-10-21-Git-Treffen-Medienhaus",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-10-21-Git-Treffen-Medienhaus/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-10-30-Austausch-digiLL",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-10-30-Austausch-digiLL/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-11-12-Bibel_OER",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-11-12-Bibel_OER/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-11-29-libori-social",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-11-29-libori-social/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-11-30-OERcamp-Essen",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-11-30-OERcamp-Essen/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-12-03-Konzeptionstag",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-12-03-Konzeptionstag/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-12-10-Antisemitismus-Treffen",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-12-10-Antisemitismus-Treffen/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-12-13-OER-Werkstatt",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-12-13-OER-Werkstatt/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2024-12-16-Canva",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2024-12-16-Canva/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-01-02-Rechtsfragen-Workshop",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-01-02-Rechtsfragen-Workshop/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-01-10-TheoWeb",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-01-10-TheoWeb/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-01-12-OER-Remix",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-01-12-OER-Remix/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-02-25-KLT-Münster",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-02-25-KLT-Münster/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-03-04-dezentrale-oep-oer",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-03-04-dezentrale-oep-oer/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-03-11-OER-Fortbildung-Teil1",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-03-11-OER-Fortbildung-Teil1/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-03-20-dezentrale-oer-infrastrukturen",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-03-20-dezentrale-oer-infrastrukturen/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-03-20-Workshop-KlimaOER",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-03-20-Workshop-KlimaOER/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-03-21-fachzeitschriften",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-03-21-fachzeitschriften/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-03-25-Third-Mission",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-03-25-Third-Mission/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-03-26-OER-Hochschulreihe-Teil-2",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-03-26-OER-Hochschulreihe-Teil-2/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-04-10-So-arbeiten-wir",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-04-10-So-arbeiten-wir/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (so-arbeiten-wir) + 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2025-04-11-OER-Hochschulreihe-Teil-3",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-04-11-OER-Hochschulreihe-Teil-3/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-04-15-open-net",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-04-15-open-net/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-04-20-OER-und-Symbole",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-04-20-OER-und-Symbole/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-04-24-Konzeptionstage",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-04-24-Konzeptionstage/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-05-04-HackathOERn",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-05-04-HackathOERn/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-05-16-OER-im-Blick-2025",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-05-16-OER-im-Blick-2025/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-06-02-RPT25",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-06-02-RPT25/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-06-26-Save_the_Date",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-06-26-Save_the_Date/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: id"
+    },
+    {
+      "slug": "2025-07-02-nostr-schrein",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-07-02-nostr-schrein/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-07-03-ÖRF-Deeper-Learning",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-07-03-ÖRF-Deeper-Learning/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-07-07-oer-rel-paed",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-07-07-oer-rel-paed/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-07-10-TriebfedOERn",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-07-10-TriebfedOERn/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-07-19-OER-Beratung",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-07-19-OER-Beratung/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-07-28-Instagram-religionspädagogischer-Lernort",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-07-28-Instagram-religionspädagogischer-Lernort/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (instagram-als-lernort) + kein 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2025-08-26-Edufeed-Pitch",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-08-26-Edufeed-Pitch/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-08-31-IT-Sommercamp-2025",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-08-31-IT-Sommercamp-2025/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-09-02-Imaginationen-von-Offenheit-in-der-Bildung",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-09-02-Imaginationen-von-Offenheit-in-der-Bildung/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (imaginationen-offenheit-bildung) + 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2025-09-10-OER-und-visuelle-Qualität",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-09-10-OER-und-visuelle-Qualität/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-09-11-OEP-Von-Ressourcen-zu-Praktiken",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-09-11-OEP-Von-Ressourcen-zu-Praktiken/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-09-24-Theologie-Memes",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-09-24-Theologie-Memes/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-10-06-Reformation",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-10-06-Reformation/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (luther-influencer) + 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2025-10-10 Offenheit braucht Tiefe TiRU Projekt",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-10-10 Offenheit braucht Tiefe TiRU Projekt/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-10-10-OER-Qualitätskriterien-Checkliste",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-10-10-OER-Qualitätskriterien-Checkliste/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-10-15-Meeting-Kerres",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-10-15-Meeting-Kerres/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-10-24-OERinfo-Fachtag-2025",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-10-24-OERinfo-Fachtag-2025/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-11-10-Actionbound",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-11-10-Actionbound/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-12-08-Lichtmomente",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-12-08-Lichtmomente/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (lichtmomente) + kein 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2025-12-08-Musik-OER",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-12-08-Musik-OER/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-12-10-Wie-gehen-Lehrpersonen-mit-OER-um",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-12-10-Wie-gehen-Lehrpersonen-mit-OER-um/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2025-12-12-Interview-relilab",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-12-12-Interview-relilab/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (interview-relilab) + kein 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2025-12-12-InterviewOtto",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2025-12-12-InterviewOtto/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (interview-daniel-otto) + 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2026-01-22-Autorisierte-Schulbuecher-oder-offene-OER",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-01-22-Autorisierte-Schulbuecher-oder-offene-OER/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2026-01-27-pilgern-im-ru",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-01-27-pilgern-im-ru/index.md",
+      "status": "skipped-empty-frontmatter",
+      "reason": "kein Frontmatter oder vollständig auskommentiert"
+    },
+    {
+      "slug": "2026-01-28",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-01-28/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (interview-relimentar) + kein 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2026-02-04-loewe-von-juda",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-02-04-loewe-von-juda/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (der-loewe-schwierigkeiten) + 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2026-02-18-Interview-reliGlobal",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-02-18-Interview-reliGlobal/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (interview-reliGlobal) + kein 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "2026-02-20-Inklusives-Lernen-durch-OEP",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-02-20-Inklusives-Lernen-durch-OEP/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: keywords"
+    },
+    {
+      "slug": "2026-03-02-FOERBICO-Zwischenfazit-Tagung",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-03-02-FOERBICO-Zwischenfazit-Tagung/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (recap-foerbico-tagung-2026) + 30142 an 4/1 Relays publishen"
+    },
+    {
+      "slug": "qualitaet",
+      "lang": "de",
+      "type": "page",
+      "path": "de/qualitaet/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "startseite",
+      "lang": "de",
+      "type": "page",
+      "path": "de/startseite/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: id, name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "tagungen",
+      "lang": "de",
+      "type": "page",
+      "path": "de/tagungen/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "unser-team",
+      "lang": "de",
+      "type": "page",
+      "path": "de/unser-team/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "conference",
+      "lang": "en",
+      "type": "page",
+      "path": "en/conference/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "homepage",
+      "lang": "en",
+      "type": "page",
+      "path": "en/homepage/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "oer-and-oep",
+      "lang": "en",
+      "type": "page",
+      "path": "en/oer-and-oep/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    },
+    {
+      "slug": "our-team",
+      "lang": "en",
+      "type": "page",
+      "path": "en/our-team/index.md",
+      "status": "skipped-missing-fields",
+      "reason": "Pflichtfelder fehlen: name, description, creator, datePublished, keywords"
+    }
+  ],
+  "counts": {
+    "ok": 12,
+    "skipped": 74,
+    "failed": 0,
+    "total": 86
+  },
+  "exitCode": 0
+}
