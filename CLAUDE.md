@@ -83,10 +83,13 @@ npm run web             # Web-Server auf localhost:3000
 
 ```bash
 cd sync/
-deno task sync           # Live-Publikation
-deno task sync --dry-run # Dry-Run (nur Anzeige)
-deno task test           # Tests
+deno task dry-run-single <pfad/zu/index.md>  # Dry-Run einzelner Post
+deno task publish-single <pfad/zu/index.md>  # Live-Publish einzelner Post
 ```
+
+**Voraussetzung in `mdparser/.env`:**
+- `BUNKER_URL=bunker://…` — frisch in Amber gepairt, FOERBICO-Account aktiv
+- `CLIENT_SECRET_HEX=<64-hex>` — fester Client-Key, sonst rotiert applesauce-signers pro Lauf und Amber sieht jede Session als neue App (Approval-Requests bleiben dann stumm). Einmal mit `openssl rand -hex 32` generieren, drin lassen.
 
 ## Nostr-Infrastruktur
 
@@ -99,7 +102,9 @@ deno task test           # Tests
 ## Entwicklungsstand
 
 - **Node.js Parser:** Stabil, v0.4.0, Tests vorhanden
-- **Deno Sync:** Design + Plan fertig, Implementierung ausstehend
+- **Deno Sync — Phase 0 (29.04.2026):** Single-Post-Publisher fertig. `sync/publish-single.ts` kann eine Markdown-Datei als Kind 30023 + 30142 publizieren (Bunker-Signing, beide Relays). Live-Events bisher: Geschöpflichkeit-als-Maßstab-KI (29.04. + Update 04.05.), hOERz-Herzensaustausch (04.05.).
+- **Deno Sync — Phase 1:** Discovery + Orchestrator + Bild-AMB-Events + Tests stehen aus. Bezugsplan: `docs/superpowers/plans/2026-03-30-md-to-nostr-dry-run.md`.
+- **Deno Sync — Phase 2:** GitHub Action im Mirror-Repo `rpi-virtuell/FOERBICO_und_rpi-virtuell`. Blaupause: `joerglohrerde/.github/workflows/publish.yml`.
 
 ## Wichtige Regeln
 
