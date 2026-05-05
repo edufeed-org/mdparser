@@ -185,7 +185,19 @@ async function selectFiles(
     return [match]
   }
 
-  const from = Deno.env.get('GITHUB_EVENT_BEFORE') ?? 'HEAD~1'
+  const NULL_SHA = '0'.repeat(40)
+  const envBefore = Deno.env.get('GITHUB_EVENT_BEFORE')
+  const from = envBefore && envBefore !== '' ? envBefore : 'HEAD~1'
+
+  if (from === NULL_SHA || from === '') {
+    console.log(
+      'diff-Modus: GITHUB_EVENT_BEFORE ist null-SHA oder leer (z. B. erster ' +
+        'Push auf Branch oder workflow_dispatch ohne push-Kontext). Kein Diff ' +
+        'verfügbar — leerer Lauf. Für vollen Re-Sync: --force-all.',
+    )
+    return []
+  }
+
   return await changedContentFiles({
     from,
     to: 'HEAD',
