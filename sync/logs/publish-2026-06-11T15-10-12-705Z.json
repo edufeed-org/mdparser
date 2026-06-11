@@ -1,0 +1,24 @@
+{
+  "runId": "2026-06-11T15-10-12-705Z",
+  "mode": "single (2026-05-18-HackathOERn-2026)",
+  "startedAt": "2026-06-11T15:10:12.705Z",
+  "finishedAt": "2026-06-11T15:10:12.739Z",
+  "contentRoot": "content",
+  "posts": [
+    {
+      "slug": "2026-05-18-HackathOERn-2026",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-05-18-HackathOERn-2026/index.md",
+      "status": "ok",
+      "reason": "dry-run: würde 30023 (hackathoern-2026) + 30142 an 4/1 Relays publishen"
+    }
+  ],
+  "counts": {
+    "ok": 1,
+    "skipped": 0,
+    "failed": 0,
+    "total": 1
+  },
+  "exitCode": 0
+}

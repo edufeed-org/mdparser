@@ -1,0 +1,54 @@
+{
+  "runId": "2026-06-11T15-10-31-528Z",
+  "mode": "single (2026-05-18-HackathOERn-2026)",
+  "startedAt": "2026-06-11T15:10:31.528Z",
+  "finishedAt": "2026-06-11T15:10:35.702Z",
+  "contentRoot": "content",
+  "posts": [
+    {
+      "slug": "2026-05-18-HackathOERn-2026",
+      "lang": "de",
+      "type": "post",
+      "path": "de/posts/2026-05-18-HackathOERn-2026/index.md",
+      "status": "ok",
+      "articleEventId": "6902b72c39528cf8b969daff2a3e8e3dcc35c75d87cbf981f3e0dccf3072dd36",
+      "ambEventId": "e1cc0a739cd10bfa185cec5e0be496338b37e9cc4c10d8f451039b9558b0f977",
+      "articleAcks": [
+        {
+          "relay": "wss://relay-rpi.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.edufeed.org/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://relay.primal.net/",
+          "ok": true,
+          "message": ""
+        },
+        {
+          "relay": "wss://theforest.nostr1.com/",
+          "ok": false,
+          "message": ""
+        }
+      ],
+      "ambAcks": [
+        {
+          "relay": "wss://amb-relay.edufeed.org/",
+          "ok": true,
+          "message": ""
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "ok": 1,
+    "skipped": 0,
+    "failed": 0,
+    "total": 1
+  },
+  "exitCode": 0
+}

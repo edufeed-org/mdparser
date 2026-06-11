@@ -256,6 +256,7 @@ flowchart TD
 | Pre-Flight-Step `AUTHOR_PUBKEY_HEX muss 64 lowercase hex sein` | Whitespace im Secret | Secret editieren, Wert per Triple-Click neu setzen |
 | Pre-Flight-Step `Bunker connect failed: no permission` | CI-Client unbekannt in Amber | Lokalen `CLIENT_SECRET_HEX` als CI-Secret nutzen ODER neuen Approval-Push in Amber bestätigen |
 | `signer: getPublicKey…` timeoutet ohne Amber-Push | altes Bunker-Pairing kaputt | `bunker://`-URL in Amber löschen + neu erzeugen, `BUNKER_URL` updaten |
+| Pre-Flight-Step `Bunker connect failed: Bunker connect timeout` (Relays alle ✅) | Amber-Pairing tot oder Amber offline — tritt dann auch lokal auf | Erst Amber öffnen + Relays prüfen; hilft das nicht: Re-Pairing nach Hürde 4, dann `BUNKER_URL` in `.env` **und** als GitHub-Secret aktualisieren (`gh secret set BUNKER_URL -R rpi-virtuell/FOERBICO_und_rpi-virtuell`). Während des Ausfalls gemergte Posts per `--post <slug>` nachpublizieren |
 | Posts werden mit `skip-missing-fields` ignoriert | Pflichtfeld fehlt (oft `keywords`) | Frontmatter ergänzen, neuer Push |
 | `change-detection: from-ref ist null-SHA` | Erster Push auf Branch oder `workflow_dispatch` ohne push-Kontext | Empty-Run-Fix greift automatisch (exit 0, 0 Posts) |
 | Habla zeigt alte Version statt aktueller | `d`-Tag ist gleich, aber Relays haben veraltete Kopie | `--force-all` oder Re-Publish einzeln |
@@ -270,6 +271,12 @@ CONTENT_ROOT=~/repositories/FOERBICO_und_rpi-virtuell/Website/content \
 ```
 
 Funktioniert auch bei Posts, die noch nie publiziert wurden, oder wenn die Action-Variante einen Post übersprungen hat.
+
+**Backfill nach fehlgeschlagenen Runs:** Ein `workflow_dispatch` ohne `force_all` publiziert nichts (diff-Modus ohne Push-Kontext = Empty-Run). Pushes, deren Sync-Run fehlgeschlagen ist, werden also nicht automatisch nachgeholt — die betroffenen Posts einzeln per `--post <ordnername>` publizieren (vorher mit `--dry-run` prüfen). Welche Posts fehlen, zeigt ein Vergleich von `git log origin/main --since=<letzter grüner Run> -- Website/content` mit den `d`-Tags der Kind-30023-Events auf den Relays.
+
+## Incident-Log
+
+- **2026-06-02 bis 2026-06-11:** Alle Sync-Runs rot, Pre-Flight mit `Bunker connect timeout` bei erreichbaren Relays. Ursache: Amber-Pairing (Remote-Pubkey `2b964d32…`) antwortete nicht mehr; mdparser-Code und Secrets unverändert. Fix: Re-Pairing in Amber (neuer Remote-Pubkey `91fb4b51…`, `CLIENT_SECRET_HEX` unverändert), `BUNKER_URL` in `.env` + GitHub-Secret aktualisiert. Verpassten Post `2026-05-18-HackathOERn-2026` per `--post` nachpubliziert (30023: 3/4 Acks, 30142: 1/1).
 
 ## Manueller Force-All über die GitHub-Action
 
