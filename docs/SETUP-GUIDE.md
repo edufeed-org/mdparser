@@ -1,18 +1,19 @@
 # Setup-Guide: mdparser-Sync mit GitHub-Action
 
-> Stand 2026-05-05. Beschreibt die Phase-1-Live-Pipeline und die Stolperfallen, die beim Aufsetzen aufgetaucht sind.
+> Stand 2026-09-02. Beschreibt die Phase-1-Live-Pipeline und die Stolperfallen, die beim Aufsetzen aufgetaucht sind.
 
 ## Was du am Ende hast
 
 Bei jedem `git push` auf `main` im Content-Repo (FOERBICO) mit Änderungen unter `Website/content/**` läuft automatisch ein GitHub-Workflow, der:
 
 1. Geänderte Posts/Pages im Repo findet (Diff seit letztem Push)
-2. Pflichtfelder validiert
+2. Die sieben Pflichtfelder validiert (`keywords` ist empfohlen, kein Pflichtfeld)
 3. Vollständige Posts via Amber/NIP-46 signiert
 4. Als Kind 30023 (Long-form Article) an 4 Relays publisht
 5. Bei `type: LearningResource` zusätzlich Kind 30142 (AMB-Metadaten) ans AMB-Relay sendet
 6. Posts mit fehlenden Pflichtfeldern überspringt (kein Abbruch)
-7. JSON-Log als Artifact hochlädt
+7. Eine Job-Summary schreibt: was publiziert wurde, was nicht und warum
+8. JSON-Log als Artifact hochlädt
 
 ## Architektur
 
@@ -184,7 +185,7 @@ AUTHOR_PUBKEY_HEX=5a12b41ec15b466321e88c371be2dc47d9193f9c8bba4ab09fc50045bd35ae
 
 ## Frontmatter-Pflichtfelder
 
-Damit ein Post als `ok` klassifiziert und publiziert wird, müssen folgende Felder im `commonMetadata`-Block gesetzt sein:
+Damit ein Post als `ok` klassifiziert und publiziert wird, müssen die **sieben Pflichtfelder** im `commonMetadata`-Block gesetzt sein. `keywords` ist seit 2026-09-02 **empfohlen, nicht Pflicht**: fehlt es, wird der Post trotzdem publiziert und in der Job-Summary unter „Metadaten unvollständig" gelistet.
 
 ```yaml
 ---
@@ -202,15 +203,28 @@ creator:
 inLanguage:
   - de
 datePublished: 2026-01-01
-keywords:
+keywords:                  # empfohlen, kein Pflichtfeld
   - schlagwort1
   - schlagwort2
 ---
 ```
 
-Fehlt **eines** dieser Felder, wird der Post mit `skip-missing-fields` übersprungen — **kein Abbruch der Pipeline**, der Post wird einfach nicht als Nostr-Event publiziert. **Häufige Lücke: `keywords`.**
+Fehlt eines der **sieben Pflichtfelder** (`id`, `name`, `description`, `license`, `creator`, `inLanguage`, `datePublished`), wird der Post mit `skip-missing-fields` übersprungen — **kein Abbruch der Pipeline**, der Post wird einfach nicht als Nostr-Event publiziert.
+
+> **Warum keywords gelockert wurde (2026-09-02):** 74 von 93 Content-Dateien hatten kein `keywords`. Der Pflichtfeld-Check hat damit den Großteil des Archivs blockiert — im Lauf vom 01.09. waren 39 der 43 Skips allein darauf zurückzuführen. Nach der Lockerung sind 78 statt 18 Dateien publizierbar. Die fachliche Lücke bleibt sichtbar, sie blockiert nur nicht mehr.
 
 > **Hürde 5 (`d`-Tag-Stabilität):** Der `d`-Tag eines Nostr-Events wird aus `commonMetadata.id` (letztes Pfad-Segment der URL) abgeleitet. Beispiel `id: https://oer.community/recap-foerbico-tagung-2026` → `d=recap-foerbico-tagung-2026`. **Diesen Wert nach dem ersten Publish nie ändern**, sonst sieht Habla/Yakihonne den Post als komplett neu, und die alten Kommentare/Likes hängen an einem nicht mehr gefundenen Event.
+
+## Was ein Run meldet
+
+Seit 2026-09-02 schreibt jeder Run eine **Job-Summary** (sichtbar direkt auf der Run-Seite in GitHub, ohne das Log zu öffnen):
+
+- Zähler publiziert / übersprungen / fehlgeschlagen
+- Liste der nicht publizierten Dateien **mit Grund**
+- Posts, die publiziert wurden, denen aber empfohlene Felder fehlen
+- Relays, die Events nicht bestätigt haben
+
+> **⚠️ Stiller Fehlschlag:** Wurden Dateien geändert, aber **kein einziger** Post publiziert, steht ganz oben eine Warnung. Dieser Fall — Redaktion pusht, Action ist grün, auf Nostr kommt nichts an — lief bis September 2026 unbemerkt durch (Runs vom 13.08., 17.08., 27.08. mit je `ok=0 skipped=1`). Der Exit-Code bleibt bewusst 0, damit die Pipeline nicht dauerrot ist; die Sichtbarkeit läuft über die Summary.
 
 ## Lokale Validierung vor Push
 
@@ -259,6 +273,8 @@ flowchart TD
 | Pre-Flight-Step `Bunker connect failed: Bunker connect timeout` (Relays alle ✅) | Amber-Pairing tot oder Amber offline — tritt dann auch lokal auf | Erst Amber öffnen + Relays prüfen; hilft das nicht: Re-Pairing nach Hürde 4, dann `BUNKER_URL` in `.env` **und** als GitHub-Secret aktualisieren (`gh secret set BUNKER_URL -R rpi-virtuell/FOERBICO_und_rpi-virtuell`). Während des Ausfalls gemergte Posts per `--post <slug>` nachpublizieren |
 | Posts werden mit `skip-missing-fields` ignoriert | Pflichtfeld fehlt (oft `keywords`) | Frontmatter ergänzen, neuer Push |
 | `change-detection: from-ref ist null-SHA` | Erster Push auf Branch oder `workflow_dispatch` ohne push-Kontext | Empty-Run-Fix greift automatisch (exit 0, 0 Posts) |
+| Run grün, aber Post nicht auf Habla | Post wurde übersprungen (Pflichtfeld fehlt) | Job-Summary des Runs öffnen — Abschnitt „Nicht publiziert" nennt die Datei und den Grund |
+| Summary meldet Relay ohne Bestätigung | Relay down, überlastet oder lehnt den Autor ab | Ein einzelnes stummes Relay ist unkritisch solange `MIN_RELAY_ACKS` erfüllt ist; dauerhaft stumm → aus `core/relays.ts` entfernen |
 | Habla zeigt alte Version statt aktueller | `d`-Tag ist gleich, aber Relays haben veraltete Kopie | `--force-all` oder Re-Publish einzeln |
 | GitHub-Action triggert nicht bei Push | `paths: Website/content/**` matcht nicht | Wenn `.github/` oder `.woodpecker/` allein geändert: kein Trigger ist erwartetes Verhalten |
 
@@ -276,6 +292,7 @@ Funktioniert auch bei Posts, die noch nie publiziert wurden, oder wenn die Actio
 
 ## Incident-Log
 
+- **2026-08 (rückwirkend erkannt am 2026-09-02):** Die Runs vom 13.08., 17.08. und 27.08. waren grün, haben aber je `ok=0 skipped=1` — es wurde nichts publiziert, ohne dass es auffiel. Ursache: fehlende Pflichtfelder in den betroffenen Dateien, kombiniert mit fehlender Sichtbarkeit (Exit-Code 0, keine Job-Summary). Fix: Job-Summary mit Warnung bei stillen Fehlschlägen, `keywords` von Pflicht auf empfohlen gelockert.
 - **2026-06-02 bis 2026-06-11:** Alle Sync-Runs rot, Pre-Flight mit `Bunker connect timeout` bei erreichbaren Relays. Ursache: Amber-Pairing (Remote-Pubkey `2b964d32…`) antwortete nicht mehr; mdparser-Code und Secrets unverändert. Fix: Re-Pairing in Amber (neuer Remote-Pubkey `91fb4b51…`, `CLIENT_SECRET_HEX` unverändert), `BUNKER_URL` in `.env` + GitHub-Secret aktualisiert. Verpassten Post `2026-05-18-HackathOERn-2026` per `--post` nachpubliziert (30023: 3/4 Acks, 30142: 1/1).
 
 ## Manueller Force-All über die GitHub-Action
@@ -336,6 +353,14 @@ FOERBICO_und_rpi-virtuell/                                # Content + Trigger
     └── build_and_copy_website.yaml     # Hugo-Build + SCP (parallel)
 ```
 
-## Phase 1 abgeschlossen
+## Stand
 
-Status seit 2026-05-05: produktiv. Auto-Trigger bei jedem Content-Push auf `main`. Publish-Logs als Artifact 30 Tage abrufbar.
+Seit 2026-05-05 produktiv: Auto-Trigger bei jedem Content-Push auf `main`, Publish-Logs als Artifact 30 Tage abrufbar, Job-Summary auf der Run-Seite.
+
+**Offen:**
+
+- **13 Dateien werden weiter übersprungen** — überwiegend Hugo-Seiten (Impressum, Datenschutz, Team, Tagungen) und Section-Indizes `_index.md`, denen `creator`/`datePublished` fehlen. Zu klären: Sollen die überhaupt als Kind 30023 auf Nostr? Wenn nein, gehören sie aus der Discovery ausgeschlossen statt als Skip gemeldet.
+- **Zwei echte Posts mit Lücken:** `2024-09-11-OER-Brownbag` (name, description, creator) und `2025-06-26-Save_the_Date` (id).
+- **`2026-01-27-pilgern-im-ru` hat kein Frontmatter** — vermutlich Entwurf.
+- **60 publizierte Posts ohne `keywords`** — Nachpflege verbessert die AMB-Metadatenqualität, blockiert aber nichts mehr.
+- **`wss://theforest.nostr1.com/` bestätigt seit Mai kein einziges Event.** Fällt nicht auf, weil `MIN_RELAY_ACKS=2` erfüllt bleibt. Entweder reparieren oder aus `ARTICLE_RELAYS` entfernen.

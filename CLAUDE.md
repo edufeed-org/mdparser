@@ -52,14 +52,17 @@ mdparser/
 
 - **Sync-Design:** `docs/superpowers/specs/2026-03-30-md-to-nostr-sync-design.md`
 - **Phase-0-Bericht:** `docs/superpowers/plans/2026-04-29-phase-0-single-post-publisher.md`
-- **Phase-1-Plan (aktuell):** `docs/superpowers/plans/2026-05-04-phase-1-ci-orchestrator.md`
+- **Phase-1-Plan (umgesetzt):** `docs/superpowers/plans/2026-05-04-phase-1-ci-orchestrator.md`
+- **Setup + aktueller Stand:** `docs/SETUP-GUIDE.md`
 
 ## Kommandos
 
 ```bash
 cd sync/
+deno task test                               # alle Tests (braucht -A)
 deno task dry-run-single <pfad/zu/index.md>  # Dry-Run einzelner Post
 deno task publish-single <pfad/zu/index.md>  # Live-Publish einzelner Post
+deno task publish-dry                        # Dry-Run über den Diff
 ```
 
 **Voraussetzung in `mdparser/.env` (gitignored):**
@@ -77,12 +80,25 @@ deno task publish-single <pfad/zu/index.md>  # Live-Publish einzelner Post
 ## Entwicklungsstand
 
 - **Phase 0 (29.04.2026):** Single-Post-Publisher fertig. Live-Events bisher: Geschöpflichkeit-als-Maßstab-KI (29.04. + Update 04.05.), hOERz-Herzensaustausch (04.05.).
-- **Phase 1 (geplant):** CI-Orchestrator mit Discovery, Diff-Modus, `cli.ts`-Subcommands, GitHub-Action. Plan: `docs/superpowers/plans/2026-05-04-phase-1-ci-orchestrator.md`. Geklärte Entscheidungen: GitHub-Mirror auf `edufeed-org/mdparser`, eigener `CLIENT_SECRET_HEX` für CI, `MIN_RELAY_ACKS=2`.
+- **Phase 1 (produktiv seit 04.05.2026):** CI-Orchestrator mit Discovery, Diff-Modus, `cli.ts`-Subcommands, GitHub-Action. Lokal und CI teilen sich denselben `CLIENT_SECRET_HEX` (separater CI-Key hat in der Praxis nicht funktioniert), `MIN_RELAY_ACKS=2`. Stand und offene Punkte: `docs/SETUP-GUIDE.md`.
 - **Phase 2 (zukünftig):** Action als Blaupause für andere Hugo-Repos extrahierbar (eigenes Action-Repo `edufeed-org/nostr-publish` o. ä.).
 
 ## GitHub-Mirror
 
-`github.com/edufeed-org/mdparser` ist Push-Mirror von Forgejo, automatisch synchron. Wird von der zukünftigen GitHub-Action im FOERBICO-Mirror-Repo per `actions/checkout` gezogen.
+`github.com/edufeed-org/mdparser` ist Push-Mirror von Forgejo, automatisch synchron. Wird von der GitHub-Action im FOERBICO-Mirror-Repo per `actions/checkout` gezogen.
+
+## Validierung
+
+Sieben **Pflichtfelder** in `commonMetadata`: `id`, `name`, `description`, `license`,
+`creator`, `inLanguage`, `datePublished`. Fehlt eines, wird die Datei übersprungen.
+
+`keywords` ist **empfohlen, nicht Pflicht** (seit 2026-09-02): fehlt es, wird der Post
+publiziert und als `missingRecommended` gemeldet. Grund: 74 von 93 Dateien hatten kein
+`keywords` — als Pflichtfeld hat es den Großteil des Archivs blockiert.
+
+Ein Run schreibt eine Job-Summary (`core/summary.ts`) nach `GITHUB_STEP_SUMMARY`. Wurden
+Dateien geändert, aber nichts publiziert, steht dort eine Warnung — dieser Fall lief
+vorher still grün durch. Der Exit-Code bleibt bewusst 0.
 
 ## Wichtige Regeln
 
