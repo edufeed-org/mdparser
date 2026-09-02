@@ -23,6 +23,7 @@ Deno.test('validatePost — vollständiger Post → ok', () => {
   const r = validatePost(withMetadata(fullMetadata()))
   assertEquals(r.status, 'ok')
   assertEquals(r.missing, [])
+  assertEquals(r.missingRecommended, [])
 })
 
 Deno.test('validatePost — null (parser hat nichts geliefert) → skip-empty-frontmatter', () => {
@@ -34,7 +35,8 @@ Deno.test('validatePost — null (parser hat nichts geliefert) → skip-empty-fr
 Deno.test('validatePost — leeres metadata-Objekt → skip-empty-frontmatter', () => {
   const r = validatePost(withMetadata({}))
   assertEquals(r.status, 'skip-empty-frontmatter')
-  assertEquals(r.missing.length, 8)
+  assertEquals(r.missing.length, 7)
+  assertEquals(r.missingRecommended, ['keywords'])
 })
 
 Deno.test('validatePost — manche Pflichtfelder fehlen → skip-missing-fields', () => {
@@ -43,15 +45,33 @@ Deno.test('validatePost — manche Pflichtfelder fehlen → skip-missing-fields'
   delete md.creator
   const r = validatePost(withMetadata(md))
   assertEquals(r.status, 'skip-missing-fields')
-  assertEquals(r.missing.sort(), ['creator', 'keywords'])
+  assertEquals(r.missing, ['creator'])
+  assertEquals(r.missingRecommended, ['keywords'])
 })
 
-Deno.test('validatePost — leeres Array bei keywords zählt als fehlend', () => {
+Deno.test('validatePost — fehlendes keywords blockiert das Publish nicht', () => {
+  const md = fullMetadata()
+  delete md.keywords
+  const r = validatePost(withMetadata(md))
+  assertEquals(r.status, 'ok')
+  assertEquals(r.missing, [])
+  assertEquals(r.missingRecommended, ['keywords'])
+  assertEquals(r.reason, 'empfohlene Felder fehlen: keywords')
+})
+
+Deno.test('validatePost — leeres Array bei keywords zählt als fehlend, publiziert aber', () => {
   const md = fullMetadata()
   md.keywords = []
   const r = validatePost(withMetadata(md))
-  assertEquals(r.status, 'skip-missing-fields')
-  assertEquals(r.missing, ['keywords'])
+  assertEquals(r.status, 'ok')
+  assertEquals(r.missingRecommended, ['keywords'])
+})
+
+Deno.test('validatePost — nur keywords gesetzt, sonst leer → skip-empty-frontmatter', () => {
+  const r = validatePost(withMetadata({ keywords: ['k1'] }))
+  assertEquals(r.status, 'skip-empty-frontmatter')
+  assertEquals(r.missing.length, 7)
+  assertEquals(r.missingRecommended, [])
 })
 
 Deno.test('validatePost — id ohne oer.community-Prefix → error', () => {

@@ -8,6 +8,7 @@ export interface PostLog {
   path: string
   status: PostStatus
   reason?: string
+  missingRecommended?: string[]
   articleEventId?: string
   ambEventId?: string
   articleAcks?: { relay: string; ok: boolean; message?: string }[]
@@ -48,6 +49,7 @@ function toPostLog(r: PostResult, contentRoot: string): PostLog {
     path: relative(contentRoot, r.file.path),
     status: r.status,
     reason: r.reason,
+    missingRecommended: r.missingRecommended?.length ? r.missingRecommended : undefined,
     articleEventId: r.articleEventId,
     ambEventId: r.ambEventId,
     articleAcks: r.articleAcks?.map((a) => ({

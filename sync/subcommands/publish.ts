@@ -6,16 +6,12 @@ import { parseMarkdown } from '../core/parser.ts'
 import { validatePost } from '../core/validation.ts'
 import { allContentFiles, type ContentFile } from '../core/discover.ts'
 import { changedContentFiles } from '../core/change-detection.ts'
-import {
-  AMB_RELAYS,
-  ARTICLE_RELAYS,
-  type PublishResult,
-  publishToRelays,
-} from '../core/relays.ts'
+import { AMB_RELAYS, ARTICLE_RELAYS, type PublishResult, publishToRelays } from '../core/relays.ts'
 import { createBunkerSigner, type Signer } from '../core/signer.ts'
 import { buildArticleEvent } from '../events/article.ts'
 import { buildAmbEvent } from '../events/amb.ts'
 import { createLogger } from '../core/log.ts'
+import { isSilentNoop, renderSummary, writeStepSummary } from '../core/summary.ts'
 
 const ARTICLE_HINT_RELAY = ARTICLE_RELAYS[0]
 const AMB_HINT_RELAY = AMB_RELAYS[0]
@@ -32,6 +28,8 @@ export interface PostResult {
   file: ContentFile
   status: PostStatus
   reason?: string
+  /** Fehlende empfohlene Felder (z.B. keywords) — Post wurde trotzdem publiziert. */
+  missingRecommended?: string[]
   articleEventId?: string
   ambEventId?: string
   articleAcks?: PublishResult[]
@@ -55,13 +53,19 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
   const validation = validatePost(parsed)
 
   if (validation.status === 'skip-empty-frontmatter') {
-    return { file, status: 'skipped-empty-frontmatter', reason: validation.reason }
+    return {
+      file,
+      status: 'skipped-empty-frontmatter',
+      reason: validation.reason,
+      missingRecommended: validation.missingRecommended,
+    }
   }
   if (validation.status === 'skip-missing-fields') {
     return {
       file,
       status: 'skipped-missing-fields',
       reason: validation.reason,
+      missingRecommended: validation.missingRecommended,
     }
   }
   if (validation.status === 'error' || parsed === null) {
@@ -69,8 +73,11 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
       file,
       status: 'failed-validation',
       reason: validation.reason ?? 'unbekannter Validation-Fehler',
+      missingRecommended: validation.missingRecommended,
     }
   }
+
+  const missingRecommended = validation.missingRecommended
 
   const pubkey = deps.cfg.authorPubkeyHex
   const article = buildArticleEvent(parsed.metadata, parsed.content, pubkey, AMB_HINT_RELAY)
@@ -83,6 +90,7 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
     return {
       file,
       status: 'ok',
+      missingRecommended,
       reason: `dry-run: würde 30023 (${dTag}) + ${
         amb ? '30142' : 'kein 30142'
       } an ${ARTICLE_RELAYS.length}/${AMB_RELAYS.length} Relays publishen`,
@@ -90,7 +98,12 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
   }
 
   if (!deps.signer) {
-    return { file, status: 'failed-publish', reason: 'kein Signer (live-Modus erfordert Bunker)' }
+    return {
+      file,
+      status: 'failed-publish',
+      missingRecommended,
+      reason: 'kein Signer (live-Modus erfordert Bunker)',
+    }
   }
 
   let signedArticle
@@ -110,7 +123,8 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
     return {
       file,
       status: 'failed-acks',
-      reason: `30023: nur ${articleOk}/${ARTICLE_RELAYS.length} acks (min ${deps.cfg.minRelayAcks})`,
+      reason:
+        `30023: nur ${articleOk}/${ARTICLE_RELAYS.length} acks (min ${deps.cfg.minRelayAcks})`,
       articleEventId: signedArticle.id,
       articleAcks,
     }
@@ -150,6 +164,7 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
   return {
     file,
     status: 'ok',
+    missingRecommended,
     articleEventId: signedArticle.id,
     articleAcks,
     ambEventId,
@@ -225,11 +240,7 @@ export async function runPublish(args: string[]): Promise<number> {
 
   const dryRun = flags['dry-run'] === true
   const cfg = loadConfig()
-  const mode = flags['force-all']
-    ? 'force-all'
-    : flags.post
-    ? `single (${flags.post})`
-    : 'diff'
+  const mode = flags['force-all'] ? 'force-all' : flags.post ? `single (${flags.post})` : 'diff'
   const logger = createLogger({ mode, contentRoot: cfg.contentRoot })
 
   console.log('=== publish ===')
@@ -270,15 +281,19 @@ export async function runPublish(args: string[]): Promise<number> {
     if (r.reason) console.log(`   ${r.reason}`)
     if (r.articleAcks && !dryRun) {
       const ok = countOkAcks(r.articleAcks)
-      console.log(`   30023: ${ok}/${r.articleAcks.length} acks${
-        r.articleEventId ? `, id=${r.articleEventId.slice(0, 12)}…` : ''
-      }`)
+      console.log(
+        `   30023: ${ok}/${r.articleAcks.length} acks${
+          r.articleEventId ? `, id=${r.articleEventId.slice(0, 12)}…` : ''
+        }`,
+      )
     }
     if (r.ambAcks && !dryRun) {
       const ok = countOkAcks(r.ambAcks)
-      console.log(`   30142: ${ok}/${r.ambAcks.length} acks${
-        r.ambEventId ? `, id=${r.ambEventId.slice(0, 12)}…` : ''
-      }`)
+      console.log(
+        `   30142: ${ok}/${r.ambAcks.length} acks${
+          r.ambEventId ? `, id=${r.ambEventId.slice(0, 12)}…` : ''
+        }`,
+      )
     }
     if (r.status === 'ok' && !dryRun && r.articleEventId) {
       const dTag = (await readDTag(file.path)) ?? ''
@@ -299,14 +314,41 @@ export async function runPublish(args: string[]): Promise<number> {
   }
   console.log(`\nSummary: ok=${counts.ok}  skipped=${counts.skipped}  failed=${counts.failed}`)
 
+  if (isSilentNoop(results)) {
+    console.log(
+      `\n⚠️  ${results.length} Datei(en) geändert, aber nichts publiziert — ` +
+        `die Änderung ist NICHT auf den Relays angekommen.`,
+    )
+  }
+
+  const incomplete = results.filter(
+    (r) => r.status === 'ok' && (r.missingRecommended?.length ?? 0) > 0,
+  )
+  if (incomplete.length > 0) {
+    console.log(
+      `💡 ${incomplete.length} publizierte(r) Post(s) mit unvollständigen Metadaten ` +
+        `(fehlende empfohlene Felder).`,
+    )
+  }
+
+  try {
+    await writeStepSummary(renderSummary({ mode, dryRun, results }))
+  } catch (err) {
+    console.error(
+      `Job-Summary konnte nicht geschrieben werden: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    )
+  }
+
   const exitCode = counts.failed > 0 ? 1 : 0
   try {
     const logFile = await logger.finish(exitCode)
     console.log(`Log:     ${logFile}`)
   } catch (err) {
-    console.error(`Log konnte nicht geschrieben werden: ${
-      err instanceof Error ? err.message : String(err)
-    }`)
+    console.error(
+      `Log konnte nicht geschrieben werden: ${err instanceof Error ? err.message : String(err)}`,
+    )
   }
 
   return exitCode
