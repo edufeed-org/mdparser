@@ -271,6 +271,7 @@ flowchart TD
 | Pre-Flight-Step `Bunker connect failed: no permission` | CI-Client unbekannt in Amber | Lokalen `CLIENT_SECRET_HEX` als CI-Secret nutzen ODER neuen Approval-Push in Amber bestätigen |
 | `signer: getPublicKey…` timeoutet ohne Amber-Push | altes Bunker-Pairing kaputt | `bunker://`-URL in Amber löschen + neu erzeugen, `BUNKER_URL` updaten |
 | Pre-Flight-Step `Bunker connect failed: Bunker connect timeout` (Relays alle ✅) | Amber-Pairing tot oder Amber offline — tritt dann auch lokal auf | Erst Amber öffnen + Relays prüfen; hilft das nicht: Re-Pairing nach Hürde 4, dann `BUNKER_URL` in `.env` **und** als GitHub-Secret aktualisieren (`gh secret set BUNKER_URL -R rpi-virtuell/FOERBICO_und_rpi-virtuell`). Während des Ausfalls gemergte Posts per `--post <slug>` nachpublizieren |
+| `signEvent (30023): invalid plaintext size: must be between 1 and 65535 bytes` | Der Artikel ist zu gross fuer NIP-46 — die verschluesselte Signieranfrage an Amber ist auf 65535 Bytes begrenzt | Protokollgrenze, kein Bug und durch Retry nicht loesbar. Artikel kuerzen oder teilen, oder den Post bewusst nur auf der Hugo-Site lassen |
 | Posts werden mit `skip-missing-fields` ignoriert | Pflichtfeld fehlt (oft `keywords`) | Frontmatter ergänzen, neuer Push |
 | `change-detection: from-ref ist null-SHA` | Erster Push auf Branch oder `workflow_dispatch` ohne push-Kontext | Empty-Run-Fix greift automatisch (exit 0, 0 Posts) |
 | Run grün, aber Post nicht auf Habla | Post wurde übersprungen (Pflichtfeld fehlt) | Job-Summary des Runs öffnen — Abschnitt „Nicht publiziert" nennt die Datei und den Grund |
@@ -289,6 +290,13 @@ CONTENT_ROOT=~/repositories/FOERBICO_und_rpi-virtuell/Website/content \
 Funktioniert auch bei Posts, die noch nie publiziert wurden, oder wenn die Action-Variante einen Post übersprungen hat.
 
 **Backfill nach fehlgeschlagenen Runs:** Ein `workflow_dispatch` ohne `force_all` publiziert nichts (diff-Modus ohne Push-Kontext = Empty-Run). Pushes, deren Sync-Run fehlgeschlagen ist, werden also nicht automatisch nachgeholt — die betroffenen Posts einzeln per `--post <ordnername>` publizieren (vorher mit `--dry-run` prüfen). Welche Posts fehlen, zeigt ein Vergleich von `git log origin/main --since=<letzter grüner Run> -- Website/content` mit den `d`-Tags der Kind-30023-Events auf den Relays.
+
+## Backfill 2026-09-02
+
+`force-all`-Lauf nach der keywords-Lockerung: **81 publiziert, 13 uebersprungen, 1 fehlgeschlagen**
+([Run 33643671895](https://github.com/rpi-virtuell/FOERBICO_und_rpi-virtuell/actions/runs/33643671895)).
+Damit sind die rund 60 Posts auf Nostr, die vorher am Pflichtfeld `keywords` haengengeblieben sind.
+Der eine Fehlschlag ist der zu grosse Artikel `2025-07-07-oer-rel-paed` (siehe Offen).
 
 ## Incident-Log
 
@@ -363,4 +371,5 @@ Seit 2026-05-05 produktiv: Auto-Trigger bei jedem Content-Push auf `main`, Publi
 - **Zwei echte Posts mit Lücken:** `2024-09-11-OER-Brownbag` (name, description, creator) und `2025-06-26-Save_the_Date` (id).
 - **`2026-01-27-pilgern-im-ru` hat kein Frontmatter** — vermutlich Entwurf.
 - **60 publizierte Posts ohne `keywords`** — Nachpflege verbessert die AMB-Metadatenqualität, blockiert aber nichts mehr.
-- **`wss://theforest.nostr1.com/` bestätigt seit Mai kein einziges Event.** Fällt nicht auf, weil `MIN_RELAY_ACKS=2` erfüllt bleibt. Entweder reparieren oder aus `ARTICLE_RELAYS` entfernen.
+- **`wss://theforest.nostr1.com/` bestätigt seit Mai kein einziges Event.** Antwortet im Pre-Flight, ackt aber nie (durchgehend 3/4 acks). Fällt nicht auf, weil `MIN_RELAY_ACKS=2` erfüllt bleibt. Entweder reparieren oder aus `ARTICLE_RELAYS` entfernen.
+- **`de/2025-07-07-oer-rel-paed` ist mit 131 KB zu gross fuer NIP-46** (Limit 65535 Bytes). Entscheidung vom 02.09.2026: bleibt auf der Hugo-Site, nicht auf Nostr. Der Post laesst jeden `force-all`-Lauf rot werden — das ist erwartet, nicht neu zu untersuchen.
