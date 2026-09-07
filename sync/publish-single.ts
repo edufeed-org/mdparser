@@ -1,6 +1,7 @@
 import { parseArgs } from 'jsr:@std/cli@^1.0.6/parse-args'
 import { nip19 } from 'nostr-tools'
-import { parseMarkdown, validateRequired } from './core/parser.ts'
+import { parseMarkdown } from './core/parser.ts'
+import { validatePost } from './core/validation.ts'
 import { buildArticleEvent } from './events/article.ts'
 import { buildAmbEvent } from './events/amb.ts'
 import { createBunkerSigner } from './core/signer.ts'
@@ -45,11 +46,19 @@ async function main() {
     Deno.exit(1)
   }
 
-  const errors = validateRequired(parsed.metadata)
-  if (errors.length > 0) {
-    console.error('Pflichtfeld-Fehler:')
-    for (const e of errors) console.error(`  - ${e}`)
+  // Derselbe Prüfer wie `cli.ts publish` (validation.ts): keywords ist seit
+  // 2026-09-02 empfohlen, nicht Pflicht. Vorher lehnte dieses Skript über
+  // parser.ts#validateRequired 74 von 93 Beiträgen ab, die die CI publiziert.
+  const validation = validatePost(parsed)
+  if (validation.status !== 'ok') {
+    console.error(
+      `Validierung: ${validation.status}${validation.reason ? ` — ${validation.reason}` : ''}`,
+    )
+    for (const f of validation.missing) console.error(`  - Pflichtfeld fehlt: ${f}`)
     Deno.exit(1)
+  }
+  if (validation.missingRecommended.length > 0) {
+    console.error(`Hinweis: empfohlene Felder fehlen: ${validation.missingRecommended.join(', ')}`)
   }
 
   // Pubkey: bei dry-run reicht ein Platzhalter, bei live kommt er aus Bunker

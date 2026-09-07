@@ -24,8 +24,10 @@ und publiziert Posts und Pages als Nostr-Events:
 - **Kind 30023** (Long-form Content) → Article-Relays
 - **Kind 30142** (AMB-Metadaten) → AMB-Relay, nur wenn `type: LearningResource`
 
-Bilder werden weiter unter `oer.community`-URLs referenziert; deren
-Auslieferung läuft separat über nostrmcp + nsite/Blossom.
+Bilder liegen auf Blossom (Hash-URL). `events/article.ts` leitet daraus die
+`x`-Tags ab — das erste für das Cover, je Fließtextbild mit Hash-URL ein
+weiteres (Spec `docs/superpowers/specs/2026-09-07-…`). Der Lizenznachweis ist
+ein eigenes `kind:1063` je Hash; `sync` prägt ihn nicht (noch nicht).
 
 ## Projektstruktur
 
@@ -108,3 +110,7 @@ vorher still grün durch. Der Exit-Code bleibt bewusst 0.
 - `created_at` als Sync-Zeitpunkt (Replaceable Events)
 - `inLanguage` als BCP 47 (nicht NIP-32)
 - Bilder werden NICHT von sync hochgeladen — das macht die CI-Pipeline via Blossom (separat)
+- `x`-Tags am 30023: erstes `x` = Cover-Hash (aus `image`), danach je Fließtextbild mit
+  Hash-URL eines, dedupliziert. Kein `x` ohne Hash im Pfad, kein `imeta`
+  (edufeed-Abstimmung 2026-09-07). Der `# bilder`-Block im Frontmatter (Konventionsnamen
+  nach `bildattribution.md`) ist Eingabe zum Prägen — das 1063 auf dem Relay ist Wahrheit.
