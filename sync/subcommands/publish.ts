@@ -12,6 +12,14 @@ import { buildArticleEvent } from '../events/article.ts'
 import { buildAmbEvent } from '../events/amb.ts'
 import { createLogger } from '../core/log.ts'
 import { isSilentNoop, renderSummary, writeStepSummary } from '../core/summary.ts'
+import {
+  bilddateien,
+  bilderSchritt,
+  type BilderErgebnis,
+  bildUrls,
+  postDirVon,
+  standardDeps,
+} from '../core/bilder.ts'
 
 const ARTICLE_HINT_RELAY = ARTICLE_RELAYS[0]
 const AMB_HINT_RELAY = AMB_RELAYS[0]
@@ -34,6 +42,8 @@ export interface PostResult {
   ambEventId?: string
   articleAcks?: PublishResult[]
   ambAcks?: PublishResult[]
+  /** Bilderschritt (core/bilder.ts): Uploads, Nachweise, Warnungen — blockiert nie. */
+  bilder?: BilderErgebnis
 }
 
 function countOkAcks(results: PublishResult[] | undefined): number {
@@ -80,6 +90,16 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
   const missingRecommended = validation.missingRecommended
 
   const pubkey = deps.cfg.authorPubkeyHex
+
+  // Bilderschritt: Blossom spiegelt Git. Zu jeder Hash-URL Blob sicherstellen und
+  // den Nachweis aus dem # bilder-Block prägen. Warnungen halten das 30023 nicht
+  // auf — die URL steht schon in Git, Git ist die Wahrheit.
+  let bilder: BilderErgebnis | undefined
+  if (bildUrls(parsed.metadata, parsed.content).length > 0) {
+    const dateien = await bilddateien(postDirVon(file.path))
+    bilder = await bilderSchritt(parsed, dateien, standardDeps(deps.signer, pubkey, deps.dryRun))
+  }
+
   const article = buildArticleEvent(parsed.metadata, parsed.content, pubkey, AMB_HINT_RELAY)
   const amb = parsed.metadata.type === 'LearningResource'
     ? buildAmbEvent(parsed.metadata, pubkey, ARTICLE_HINT_RELAY)
@@ -91,6 +111,7 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
       file,
       status: 'ok',
       missingRecommended,
+      bilder,
       reason: `dry-run: würde 30023 (${dTag}) + ${
         amb ? '30142' : 'kein 30142'
       } an ${ARTICLE_RELAYS.length}/${AMB_RELAYS.length} Relays publishen`,
@@ -102,6 +123,7 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
       file,
       status: 'failed-publish',
       missingRecommended,
+      bilder,
       reason: 'kein Signer (live-Modus erfordert Bunker)',
     }
   }
@@ -165,6 +187,7 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
     file,
     status: 'ok',
     missingRecommended,
+    bilder,
     articleEventId: signedArticle.id,
     articleAcks,
     ambEventId,
@@ -294,6 +317,16 @@ export async function runPublish(args: string[]): Promise<number> {
           r.ambEventId ? `, id=${r.ambEventId.slice(0, 12)}…` : ''
         }`,
       )
+    }
+    if (r.bilder) {
+      const b = r.bilder
+      const teile = [
+        b.hochgeladen.length ? `${b.hochgeladen.length} Blob(s) ${dryRun ? 'würden hochgeladen' : 'hochgeladen'}` : '',
+        b.nachweise.length ? `${b.nachweise.length} Nachweis(e) ${dryRun ? 'würden geprägt' : 'geprägt'}` : '',
+        b.unveraendert.length ? `${b.unveraendert.length} unverändert` : '',
+      ].filter(Boolean)
+      if (teile.length) console.log(`   bilder: ${teile.join(', ')}`)
+      for (const w of b.warnungen) console.log(`   ⚠️  ${w}`)
     }
     if (r.status === 'ok' && !dryRun && r.articleEventId) {
       const dTag = (await readDTag(file.path)) ?? ''

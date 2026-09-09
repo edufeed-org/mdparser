@@ -1,7 +1,16 @@
 # Spec: Regression-Wächter in `sync publish`, `x` aus der Blossom-URL, Blossom-URLs in Git
 
 **Datum:** 2026-09-07
-**Status:** Entwurf
+**Status:** Entwurf — **Teil 1 (Wächter) entfällt** (Entscheidung 09.09.2026, s. u.); Teil 2 umgesetzt (820f0d1); Teil 3 umgesetzt (md2blossom 240ba8e, Referenzpost, content-lint c8afa60, felder.yaml/bildattribution.md 3056ca9); Nachweise signieren → `core/bilder.ts` in `publish`.
+
+> **Entscheidung 09.09.2026 — kein Wächter.** Das Modell wird Git-first ohne
+> Ausnahme: Der Editor schreibt nach Git (Branch + Pull Request), Review und
+> Freigabe laufen dort, nur `sync publish` schreibt Events des FOERBICO-Keys.
+> Damit gibt es keinen zweiten Schreiber, dessen Fortschritt der Wächter
+> schützen müsste. Rückschritte in Git (Dateiname statt Hash-URL,
+> `relative: true`) fängt content-lint in der Blossom-Form vor dem Merge.
+> `sync adopt` und die Label-Freigabe aus ADR-0021 werden dafür nicht
+> gebraucht. Teil 1 bleibt als Beschreibung stehen, wird nicht gebaut.
 **Bezug:** `2026-09-04-bilder-und-pull.md` (ändert dessen Teil A, lässt B und C
 unberührt) · `community-hub/docs/entscheidungen/0013`, `0021`, `0022` ·
 `community-hub/docs/redaktion-longform.md` ·
@@ -349,7 +358,13 @@ ausgecheckt.
 ### Nachweise signieren
 
 `md2blossom` schreibt unsignierte 1063-Vorlagen und signiert nicht (kein
-Key im Skript). Wer publiziert sie in der Migration? Siehe „Offen".
+Key im Skript). Publiziert werden sie von `sync publish` (`core/bilder.ts`,
+seit 09.09.2026): Zu jeder Hash-URL des Beitrags stellt der Bilderschritt den
+Blob auf Blossom sicher (Upload aus dem Beitragsordner, kind:24242) und prägt
+den Nachweis aus dem `# bilder`-Block, wenn keiner oder ein abweichender auf
+dem Relay liegt. Migration heißt damit: Block schreiben, `md2blossom --write`,
+Pull Request — kein Key lokal. Für die Übergangszeit gibt es
+`Website/scripts/blossom-bunker.ts` (deno task upload/publish) im FOERBICO-Repo.
 
 ### Dokumente nachziehen
 

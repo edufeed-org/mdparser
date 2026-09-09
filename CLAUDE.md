@@ -24,10 +24,18 @@ und publiziert Posts und Pages als Nostr-Events:
 - **Kind 30023** (Long-form Content) → Article-Relays
 - **Kind 30142** (AMB-Metadaten) → AMB-Relay, nur wenn `type: LearningResource`
 
-Bilder liegen auf Blossom (Hash-URL). `events/article.ts` leitet daraus die
-`x`-Tags ab — das erste für das Cover, je Fließtextbild mit Hash-URL ein
-weiteres (Spec `docs/superpowers/specs/2026-09-07-…`). Der Lizenznachweis ist
-ein eigenes `kind:1063` je Hash; `sync` prägt ihn nicht (noch nicht).
+Bilder liegen auf Blossom (Hash-URL, Git trägt die URL). `events/article.ts`
+leitet daraus die `x`-Tags ab — das erste für das Cover, je Fließtextbild mit
+Hash-URL ein weiteres (Spec `docs/superpowers/specs/2026-09-07-…`).
+`core/bilder.ts` (seit 2026-09-09) sorgt in `publish` dafür, dass Blossom
+Git spiegelt: fehlende Blobs werden aus dem Beitragsordner mit dem
+FOERBICO-Key hochgeladen (BUD-01, kind:24242), der Lizenznachweis
+`kind:1063` wird aus dem `# bilder`-Block geprägt, wenn auf dem Relay keiner
+oder ein abweichender liegt. Warnungen (fehlender Block-Eintrag, fehlende
+Datei) stehen in der Job-Summary und blockieren das 30023 nicht.
+Ein Schreiber je Beitrag: nur `publish` schreibt Events des FOERBICO-Keys —
+der Regression-Wächter aus der Spec vom 07.09. entfällt deshalb; Rückschritte
+in Git fängt content-lint (C06/C07/V18, Blossom-Form) vor dem Merge.
 
 ## Projektstruktur
 

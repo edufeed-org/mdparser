@@ -18,6 +18,13 @@ der Editor für FOERBICO tabu.
 
 ## Teil A — Bilderschritt in `publish`
 
+> **Stand 09.09.2026:** umgesetzt als `core/bilder.ts`, aber anders als hier
+> beschrieben: Git trägt die Blossom-URLs selbst (Spec 07.09., Teil 3), der
+> Schritt schreibt nichts zurück und schreibt nichts um — er stellt nur sicher,
+> dass Blob und Nachweis zu jeder Hash-URL existieren. Teil B (`pull`) und
+> Teil C (`label`/`adopt`) entfallen mit der Entscheidung für Git-first ohne
+> Nostr-first-Beiträge (siehe Spec 07.09., Kopf).
+
 ### Konvention im Content-Repo
 
 Je Post-Verzeichnis eine `bilder.yaml` (Schlüssel = Dateiname):

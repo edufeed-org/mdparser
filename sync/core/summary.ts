@@ -85,6 +85,31 @@ export function renderSummary(input: SummaryInput): string {
     out.push('')
   }
 
+  // Bilderschritt: was auf Blossom und den Lizenz-Relays passiert ist, und wo
+  // die Redaktion nacharbeiten muss (fehlender Block-Eintrag, fehlende Datei).
+  const mitBildern = results.filter((r) => r.bilder)
+  if (mitBildern.length > 0) {
+    const sum = (k: 'hochgeladen' | 'nachweise' | 'unveraendert') =>
+      mitBildern.reduce((n, r) => n + r.bilder![k].length, 0)
+    out.push('### 🖼️ Bilder')
+    out.push('')
+    out.push(
+      `Blobs ${dryRun ? 'würden hochgeladen' : 'hochgeladen'}: ${sum('hochgeladen')} · ` +
+        `Nachweise (kind:1063) ${dryRun ? 'würden geprägt' : 'geprägt'}: ${sum('nachweise')} · ` +
+        `unverändert: ${sum('unveraendert')}`,
+    )
+    out.push('')
+    const warnungen = mitBildern.filter((r) => r.bilder!.warnungen.length > 0)
+    if (warnungen.length > 0) {
+      out.push('Nacharbeit (blockiert nicht, aber ohne Nachweis zeigt der Hub die Lizenz nicht):')
+      out.push('')
+      for (const r of warnungen) {
+        for (const w of r.bilder!.warnungen) out.push(`- ${r.file.lang}/${r.file.slug}: ${w}`)
+      }
+      out.push('')
+    }
+  }
+
   // Ein Relay, das dauerhaft nicht ackt, faellt sonst niemandem auf, solange
   // MIN_RELAY_ACKS erfuellt ist.
   const relayFails = new Map<string, number>()
