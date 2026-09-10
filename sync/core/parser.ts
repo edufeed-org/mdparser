@@ -47,7 +47,12 @@ export interface BildMetadaten {
   sourceUrl?: string
   modification?: string
   pubkey?: string
+  /** KI-Beteiligung nach edufeed-Wiki (EU-AI-Office-Icons): generated = vollständig KI-generiert, modified = mit KI bearbeitet. */
+  ai?: KiWert
 }
+
+export const KI_WERTE = ['generated', 'modified'] as const
+export type KiWert = (typeof KI_WERTE)[number]
 
 export type Bilder = Record<string, BildMetadaten>
 

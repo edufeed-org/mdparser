@@ -16,7 +16,7 @@
  */
 import { dirname, extname, join } from 'jsr:@std/path@^1.0.0'
 import { encodeHex } from 'jsr:@std/encoding@^1.0.5/hex'
-import type { BildMetadaten, Bilder, CommonMetadata } from './parser.ts'
+import { type BildMetadaten, type Bilder, type CommonMetadata, KI_WERTE, type KiWert } from './parser.ts'
 import { hashAusUrl, type UnsignedEvent } from '../events/article.ts'
 import type { SignedEvent, Signer } from './signer.ts'
 import { publishToRelays, readEvents } from './relays.ts'
@@ -101,7 +101,9 @@ export interface NachweisEingabe {
  * md2blossom und foerbico-editor (bilder.js, nachweisEvent): title→title,
  * author→credit, licenceUrl→license, sourceUrl→source, pubkey→p; authorUrl und
  * modification als Zusatz-Tags ohne NIP-Standard. m und size nur, wenn die Datei
- * bekannt ist.
+ * bekannt ist. ai→ai (generated | modified, edufeed-Wiki license-events-nope
+ * vom 2026-09-10) als letzter Tag; ein anderer Wert ergibt keinen Tag — Leser
+ * ignorieren ihn ohnehin und behandeln das Bild als nicht deklariert.
  */
 export function nachweisEvent(e: NachweisEingabe): UnsignedEvent {
   const l = e.eintrag
@@ -118,7 +120,13 @@ export function nachweisEvent(e: NachweisEingabe): UnsignedEvent {
   if (l.authorUrl) tags.push(['authorUrl', l.authorUrl])
   if (l.modification) tags.push(['modification', l.modification])
   if (l.pubkey) tags.push(['p', l.pubkey])
+  if (kiWertGueltig(l.ai)) tags.push(['ai', l.ai])
   return { kind: 1063, pubkey: e.pubkey, created_at: Math.floor(Date.now() / 1000), tags, content: '' }
+}
+
+/** Nur die zwei Werte des Wikis sind bedeutungsvoll; alles andere ist „nicht deklariert". */
+export function kiWertGueltig(w: unknown): w is KiWert {
+  return typeof w === 'string' && (KI_WERTE as readonly string[]).includes(w)
 }
 
 /** Zwei Nachweise sagen dasselbe, wenn ihre Tags gleich sind — Zeitstempel und Signatur zählen nicht. */
@@ -244,6 +252,11 @@ export async function bilderSchritt(
     if (!eintrag.licenceUrl) {
       r.warnungen.push(`${kurz(hash)}: Eintrag für ${name} ohne licenceUrl — kein Nachweis`)
       continue
+    }
+    if (eintrag.ai !== undefined && !kiWertGueltig(eintrag.ai)) {
+      r.warnungen.push(
+        `${kurz(hash)}: ai-Wert „${String(eintrag.ai)}" für ${name} unbekannt (erlaubt: ${KI_WERTE.join(', ')}) — Nachweis ohne ai-Tag`,
+      )
     }
     const soll = nachweisEvent({
       url, hash, pubkey: deps.pubkey, eintrag, mime: datei?.mime, groesse: datei?.groesse,

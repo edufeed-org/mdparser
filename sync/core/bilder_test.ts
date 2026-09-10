@@ -194,3 +194,36 @@ Deno.test('bilderSchritt: ohne Hash-URLs passiert nichts', async () => {
   const r = await bilderSchritt({ metadata: meta(), content: '![x](lokal.jpg)' }, new Map(), deps)
   assertEquals(r, { hochgeladen: [], nachweise: [], unveraendert: [], warnungen: [] })
 })
+
+// --- KI-Kennzeichnung (edufeed-Wiki license-events-nope, 2026-09-10): ai = generated | modified ---
+
+Deno.test('nachweisEvent: ai → ai-Tag als letzter Tag, nur generated oder modified', () => {
+  const gen = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { licenceUrl: 'https://l', ai: 'generated', pubkey: 'd'.repeat(64) } })
+  assertEquals(gen.tags.at(-1), ['ai', 'generated'])
+  const mod = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { licenceUrl: 'https://l', ai: 'modified' } })
+  assertEquals(mod.tags.at(-1), ['ai', 'modified'])
+  const ohne = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { licenceUrl: 'https://l' } })
+  assertEquals(ohne.tags.find((t) => t[0] === 'ai'), undefined)
+  // Fremder Wert: kein Tag — Leser würden ihn ohnehin ignorieren
+  const falsch = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { licenceUrl: 'https://l', ai: 'ja' as never } })
+  assertEquals(falsch.tags.find((t) => t[0] === 'ai'), undefined)
+})
+
+Deno.test('bilderSchritt: ungültiger ai-Wert → Warnung, Nachweis kommt trotzdem ohne ai-Tag', async () => {
+  const { w, deps } = welt({ blobs: new Set([H1]) })
+  const block = { 'bild.jpeg': { ...BLOCK['bild.jpeg'], ai: 'KI' as never } }
+  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: block }, DATEIEN, deps)
+  assertEquals(r.nachweise, [H1])
+  assertEquals(w.publiziert, [H1])
+  assertEquals(r.warnungen.length, 1)
+  assert(r.warnungen[0].includes('ai') && r.warnungen[0].includes('generated'))
+})
+
+Deno.test('bilderSchritt: ai ergänzt → bestehender Nachweis gilt als geändert, neuer wird geprägt', async () => {
+  const alt = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: BLOCK['bild.jpeg'], mime: 'image/jpeg', groesse: 3 })
+  const { w, deps } = welt({ blobs: new Set([H1]), nachweise: { [H1]: alt } })
+  const block = { 'bild.jpeg': { ...BLOCK['bild.jpeg'], ai: 'generated' as const } }
+  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: block }, DATEIEN, deps)
+  assertEquals(r.nachweise, [H1])
+  assertEquals(w.publiziert, [H1])
+})

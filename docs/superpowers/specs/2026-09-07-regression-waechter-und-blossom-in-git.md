@@ -273,6 +273,7 @@ Zwei Wege zum selben 1063:
 | `modification` | `modification` — Zusatz-Tag, wie der Editor |
 | `alt` | `alt` |
 | `pubkey` | `p` |
+| `ai` | `ai` — `generated` \| `modified` (Wiki-Fassung vom 10.09.2026, EU-AI-Office-Icons); anderer Wert → kein Tag, Warnung |
 
 Die rechte Spalte ist edufeeds Vertrag, seit dem 07.09. von edufeed selbst
 dokumentiert (Wiki `license-events-nope`, siehe Bezug): Pflicht `url`, `x`,
@@ -281,7 +282,11 @@ dokumentiert (Wiki `license-events-nope`, siehe Bezug): Pflicht `url`, `x`,
 im Code: **beim Lesen genügt `license`** (`ImageLicenseOverlay`), und
 Fließtextbilder lösen den Hash aus der Blossom-URL (`getSha256FromURL`).
 `authorUrl`/`modification` sind FOERBICOs Erweiterung; edufeed ignoriert
-unbekannte Tags.
+unbekannte Tags. **Nachtrag 10.09.2026:** Das Wiki kennt jetzt `ai`
+(`generated` | `modified`, höchstens einmal, andere Werte ignorieren, kein Tag
+= nicht deklariert). `core/bilder.ts` prägt es als letzten Tag aus dem
+Block-Feld `ai`; Hub (ADR-0025), md2blossom und Editor zeigen es als
+„KI-generiert"/„KI-verändert" hinter der Lizenz.
 
 **Ableitbares steht nicht im Block.** `url`, `x`, `m`, `size`, `dim` rechnet
 der Konverter aus der Datei — für das 1063 und die `x`-Tags am Artikel.
