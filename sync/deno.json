@@ -5,6 +5,8 @@
     "publish": "deno run --env-file=../.env --allow-env --allow-read --allow-write=./logs --allow-net --allow-run=git cli.ts publish",
     "publish-dry": "deno run --env-file=../.env --allow-env --allow-read --allow-write=./logs --allow-net --allow-run=git cli.ts publish --dry-run",
     "validate-post": "deno run --allow-env --allow-read cli.ts validate-post",
+    "redaktion": "deno run --env-file=../.env --allow-env --allow-read --allow-net cli.ts redaktion",
+    "redaktion-dry": "deno run --env-file=../.env --allow-env --allow-read --allow-net cli.ts redaktion --dry-run",
     "dry-run-single": "deno run --env-file=../.env --allow-env --allow-read publish-single.ts --dry-run",
     "publish-single": "deno run --env-file=../.env --allow-env --allow-read --allow-net publish-single.ts"
   },
