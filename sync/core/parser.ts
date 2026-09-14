@@ -82,6 +82,12 @@ export function parseMarkdown(markdown: string): ParsedMarkdown | null {
   const parsed = parse(cleanedYaml)
   if (!parsed || typeof parsed !== 'object') return null
 
+  // `inLanguage: de` (String statt Liste) kam in 19 Beiträgen vor; `[0]` davon
+  // ergab „d". Ein Mensch meint mit dem String dasselbe wie mit der Liste.
+  if (typeof (parsed as { inLanguage?: unknown }).inLanguage === 'string') {
+    ;(parsed as { inLanguage: unknown }).inLanguage = [(parsed as { inLanguage: string }).inLanguage]
+  }
+
   const bilder = bilderIndex >= 0 ? bilderBlockLesen(rawYaml, bilderIndex, ssgIndex) : undefined
 
   return { metadata: parsed as CommonMetadata, content, ...(bilder ? { bilder } : {}) }

@@ -48,11 +48,20 @@ function textbildHashes(content: string): string[] {
   return hashes
 }
 
+/** Selbst-Label (NIP-32), das eine Seite von einem Artikel unterscheidet — Hub ADR-0027. */
+export const SEITEN_LABEL: readonly string[][] = [['L', 'foerbico/typ'], ['l', 'seite', 'foerbico/typ']]
+
+export interface ArticleOptionen {
+  /** true für Dateien außerhalb von posts/ (discover: type 'page'). */
+  seite?: boolean
+}
+
 export function buildArticleEvent(
   metadata: CommonMetadata,
   content: string,
   pubkey: string,
   ambRelay: string,
+  optionen: ArticleOptionen = {},
 ): UnsignedEvent {
   const slug = extractSlug(metadata.id!)
   const lang = metadata.inLanguage?.[0] ?? 'de'
@@ -64,6 +73,10 @@ export function buildArticleEvent(
     ['published_at', String(Math.floor(new Date(metadata.datePublished!).getTime() / 1000))],
     ['inLanguage', lang],
   ]
+
+  // Seiten tragen das Selbst-Label: Der Hub nimmt sie damit aus Blog, Themen
+  // und Feed heraus und zeigt sie ohne Datum (ADR-0027). Ein Artikel hat es nicht.
+  if (optionen.seite) for (const t of SEITEN_LABEL) tags.push([...t])
 
   // Zeiger auf die Nachweise (kind:1063): je Bild ein x-Tag — so hat edufeed
   // es am 07.09.2026 vorgeschlagen. Das Cover zuerst, unmittelbar nach image

@@ -36,7 +36,7 @@ globalThis.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => 
 })
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  let timerId: number | undefined
+  let timerId: ReturnType<typeof setTimeout> | undefined
   const timeoutPromise = new Promise<never>((_r, rej) => {
     timerId = setTimeout(() => rej(new Error(`${label} timeout`)), ms)
   })

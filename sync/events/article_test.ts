@@ -126,3 +126,16 @@ Deno.test('Cover ohne Fließtextbild: genau ein x', () => {
   const ev = buildArticleEvent(meta({ image: URL_ }), 'Nur Text.', PK, RELAY)
   assertEquals(tags(ev, 'x'), [['x', HASH]])
 })
+
+// --- Seiten (Hub ADR-0027): Selbst-Label NIP-32 ---
+
+Deno.test('eine Seite trägt das Selbst-Label foerbico/typ = seite', () => {
+  const ev = buildArticleEvent(meta(), '', PK, RELAY, { seite: true })
+  assertEquals(tags(ev, 'L'), [['L', 'foerbico/typ']])
+  assertEquals(tags(ev, 'l'), [['l', 'seite', 'foerbico/typ']])
+})
+
+Deno.test('ein Artikel trägt kein Label — auch nicht ohne Optionen', () => {
+  assertEquals(tags(buildArticleEvent(meta(), '', PK, RELAY), 'l'), [])
+  assertEquals(tags(buildArticleEvent(meta(), '', PK, RELAY, {}), 'L'), [])
+})

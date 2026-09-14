@@ -100,7 +100,9 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
     bilder = await bilderSchritt(parsed, dateien, standardDeps(deps.signer, pubkey, deps.dryRun))
   }
 
-  const article = buildArticleEvent(parsed.metadata, parsed.content, pubkey, AMB_HINT_RELAY)
+  const article = buildArticleEvent(parsed.metadata, parsed.content, pubkey, AMB_HINT_RELAY, {
+    seite: file.type === 'page',
+  })
   const amb = parsed.metadata.type === 'LearningResource'
     ? buildAmbEvent(parsed.metadata, pubkey, ARTICLE_HINT_RELAY)
     : null

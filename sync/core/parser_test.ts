@@ -57,3 +57,10 @@ Deno.test('der Body bleibt vollständig erhalten', () => {
   const p = parseMarkdown(MIT_BILDERN)
   assertEquals(p?.content.trim(), 'Text.')
 })
+
+Deno.test('inLanguage als String wird zur Liste — sonst hieße die Sprache „d"', () => {
+  const md = '---\n# commonMetadata\nid: https://oer.community/x\ninLanguage: de\n---\nText\n'
+  assertEquals(parseMarkdown(md)?.metadata.inLanguage, ['de'])
+  const liste = '---\n# commonMetadata\nid: https://oer.community/x\ninLanguage:\n  - en\n---\nText\n'
+  assertEquals(parseMarkdown(liste)?.metadata.inLanguage, ['en'])
+})

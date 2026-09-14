@@ -37,7 +37,8 @@ export interface BildDatei {
   hash: string
   mime: string
   groesse: number
-  bytes: Uint8Array
+  // Uint8Array<ArrayBuffer>, nicht ArrayBufferLike: fetch() nimmt nur ersteres als body.
+  bytes: Uint8Array<ArrayBuffer>
 }
 
 export interface BildUrl {
