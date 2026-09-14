@@ -3,7 +3,7 @@
 // FOERBICO-Key. Quelle ist community-hub/docs/redaktionskreis.md — die Liste
 // hier ist eine Kopie und muss mit der Datei übereinstimmen (ADR-0021).
 import { loadConfig } from '../core/config.ts'
-import { createBunkerSigner } from '../core/signer.ts'
+import { createSigner } from '../core/signer.ts'
 import { ARTICLE_RELAYS, publishToRelays } from '../core/relays.ts'
 import type { UnsignedEvent } from '../events/article.ts'
 
@@ -36,7 +36,7 @@ export async function runRedaktion(args: string[]): Promise<number> {
   console.log(`=== redaktion === ${REDAKTION.length} Mitglieder, dry-run=${dryRun}`)
   if (dryRun) { console.log(JSON.stringify(ev, null, 2)); return 0 }
 
-  const signer = await createBunkerSigner(cfg.bunkerUrl, { clientSecretHex: cfg.clientSecretHex })
+  const signer = await createSigner(cfg)
   if ((await signer.getPublicKey()) !== cfg.authorPubkeyHex) {
     console.error('Bunker-Pubkey stimmt nicht mit AUTHOR_PUBKEY_HEX überein')
     return 1

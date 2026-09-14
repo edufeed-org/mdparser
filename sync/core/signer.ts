@@ -49,6 +49,30 @@ export interface CreateSignerOptions {
   clientSecretHex?: string
 }
 
+/**
+ * Signer mit lokalem Schlüssel — für Läufe von Hand (redaktion, navigation),
+ * wenn AUTHOR_SECRET_HEX in der .env steht. Der Schlüssel bleibt in der Datei;
+ * hier wird er nur gelesen, nie ausgegeben.
+ */
+export function createLocalSigner(secretHex: string): Signer {
+  const s = SimpleSigner.fromKey(secretHex)
+  return {
+    getPublicKey: () => s.getPublicKey(),
+    signEvent: async (ev: UnsignedEvent) => (await s.signEvent(ev)) as SignedEvent,
+  }
+}
+
+/** Lokaler Schlüssel, wenn konfiguriert — sonst der Bunker (CI-Weg). */
+export function createSigner(
+  cfg: { bunkerUrl: string; clientSecretHex?: string; authorSecretHex?: string },
+): Promise<Signer> {
+  if (cfg.authorSecretHex) {
+    console.log('  signer: lokaler Schlüssel (AUTHOR_SECRET_HEX)')
+    return Promise.resolve(createLocalSigner(cfg.authorSecretHex))
+  }
+  return createBunkerSigner(cfg.bunkerUrl, { clientSecretHex: cfg.clientSecretHex })
+}
+
 export async function createBunkerSigner(
   bunkerUrl: string,
   options: CreateSignerOptions = {},

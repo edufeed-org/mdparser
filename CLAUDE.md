@@ -73,10 +73,18 @@ deno task test                               # alle Tests (braucht -A)
 deno task dry-run-single <pfad/zu/index.md>  # Dry-Run einzelner Post
 deno task publish-single <pfad/zu/index.md>  # Live-Publish einzelner Post
 deno task publish-dry                        # Dry-Run über den Diff
+deno task redaktion[-dry]                    # Redaktionsliste kind:30000 d=redaktion (Quelle: community-hub/docs/redaktionskreis.md)
+deno task navigation[-dry]                   # Menü + Fußzeile kind:30004 aus Website/navigation.yaml (Hub ADR-0027)
 ```
+
+**Seiten** (alles außerhalb `posts/`) bekommen im 30023 das NIP-32-Selbst-Label
+`["L","foerbico/typ"]`, `["l","seite","foerbico/typ"]`; der community-hub nimmt
+sie damit aus Blog, Themen und Feed und zeigt sie ohne Datum (ADR-0027). Die
+Startseite des Hubs ist die Seite mit `d = startseite`.
 
 **Voraussetzung in `mdparser/.env` (gitignored):**
 - `BUNKER_URL=bunker://…` — frisch in Amber gepairt, FOERBICO-Account aktiv
+- `AUTHOR_SECRET_HEX=<64-hex>` — optional, nur für Läufe von Hand (`redaktion`, `navigation`): dann signiert der Prozess selbst und der Bunker bleibt aus. Nie committen, nie in die CI.
 - `CLIENT_SECRET_HEX=<64-hex>` — fester Client-Key, sonst rotiert applesauce-signers pro Lauf und Amber sieht jede Session als neue App (Approval-Requests bleiben dann stumm). Einmal mit `openssl rand -hex 32` generieren, drin lassen.
 
 ## Nostr-Infrastruktur

@@ -3,6 +3,8 @@ export interface Config {
   authorPubkeyHex: string
   contentRoot: string
   clientSecretHex?: string
+  /** Optional: geheimer Schlüssel des Autors (64 hex) — dann signiert der Prozess selbst statt über den Bunker. */
+  authorSecretHex?: string
   minRelayAcks: number
 }
 
@@ -49,6 +51,10 @@ export function loadConfig(read: EnvReader = (k) => Deno.env.get(k)): Config {
     ? parseInt64Hex(clientSecretRaw, 'CLIENT_SECRET_HEX')
     : undefined
   const minRelayAcks = parseMinRelayAcks(read('MIN_RELAY_ACKS'))
+  const secretRaw = read('AUTHOR_SECRET_HEX')
+  const authorSecretHex = secretRaw && secretRaw.length > 0
+    ? parseInt64Hex(secretRaw, 'AUTHOR_SECRET_HEX')
+    : undefined
 
-  return { bunkerUrl, authorPubkeyHex, contentRoot, clientSecretHex, minRelayAcks }
+  return { bunkerUrl, authorPubkeyHex, contentRoot, clientSecretHex, authorSecretHex, minRelayAcks }
 }
