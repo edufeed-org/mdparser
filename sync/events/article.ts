@@ -49,6 +49,36 @@ function textbildHashes(content: string): string[] {
 }
 
 /** Selbst-Label (NIP-32), das eine Seite von einem Artikel unterscheidet — Hub ADR-0027. */
+/** Marker des a-Tags, das auf die andere Sprachfassung zeigt (community-hub ADR-0033). */
+export const UEBERSETZUNG_MARKER = 'translation'
+
+function alsListe(wert: string | string[] | undefined): string[] {
+  return wert === undefined ? [] : Array.isArray(wert) ? wert : [wert]
+}
+
+/**
+ * URLs der Übersetzungen aus workTranslation und translationOfWork — nur auf
+ * derselben Site wie die id. Ein fremder Host wäre ein fremder Text, kein
+ * Gegenstück im Sinne des Hubs; ungültige URLs fallen still weg.
+ */
+export function uebersetzungsUrls(metadata: CommonMetadata): string[] {
+  let eigene: string | null = null
+  try {
+    eigene = metadata.id ? new URL(metadata.id).host : null
+  } catch {
+    eigene = null
+  }
+  if (!eigene) return []
+  const alle = [...alsListe(metadata.workTranslation), ...alsListe(metadata.translationOfWork)]
+  return alle.filter((u) => {
+    try {
+      return new URL(u).host === eigene
+    } catch {
+      return false
+    }
+  })
+}
+
 export const SEITEN_LABEL: readonly string[][] = [['L', 'foerbico/typ'], ['l', 'seite', 'foerbico/typ']]
 
 export interface ArticleOptionen {
@@ -98,6 +128,14 @@ export function buildArticleEvent(
 
   if (metadata.keywords) {
     for (const kw of metadata.keywords) tags.push(['t', kw])
+  }
+
+  // Übersetzungen (community-hub ADR-0033): schema.org workTranslation (dieser
+  // Text hat eine Übersetzung) und translationOfWork (dieser Text ist eine)
+  // werden zum a-Tag mit Marker translation auf das Gegenstück derselben Site.
+  // Der Hub liest beide Richtungen; eine genügt ihm.
+  for (const url of uebersetzungsUrls(metadata)) {
+    tags.push(['a', `30023:${pubkey}:${extractSlug(url)}`, '', UEBERSETZUNG_MARKER])
   }
 
   if (metadata.type === 'LearningResource') {

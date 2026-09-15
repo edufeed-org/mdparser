@@ -28,6 +28,10 @@ export interface CommonMetadata {
   educationalLevel?: string[]
   datePublished?: string
   keywords?: string[]
+  /** schema.org: dieser Text hat eine Übersetzung (URL der anderen Sprachfassung). */
+  workTranslation?: string | string[]
+  /** schema.org: dieser Text ist die Übersetzung von (URL des Originals). */
+  translationOfWork?: string | string[]
 }
 
 /**

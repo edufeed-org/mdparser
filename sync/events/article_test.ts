@@ -139,3 +139,35 @@ Deno.test('ein Artikel trägt kein Label — auch nicht ohne Optionen', () => {
   assertEquals(tags(buildArticleEvent(meta(), '', PK, RELAY), 'l'), [])
   assertEquals(tags(buildArticleEvent(meta(), '', PK, RELAY, {}), 'L'), [])
 })
+
+// --- Übersetzungen (community-hub ADR-0033) ---
+
+Deno.test('workTranslation wird zum a-Tag mit Marker translation auf das d der anderen Fassung', () => {
+  const ev = buildArticleEvent(
+    meta({ id: 'https://oer.community/tagungen', workTranslation: ['https://oer.community/en/conference'] }),
+    '',
+    PK,
+    RELAY,
+  )
+  assertEquals(tags(ev, 'a'), [['a', `30023:${PK}:en/conference`, '', 'translation']])
+})
+
+Deno.test('translationOfWork als String ebenso; das d der deutschen Seite hat kein Präfix', () => {
+  const ev = buildArticleEvent(
+    meta({ id: 'https://oer.community/en/conference', inLanguage: ['en'], translationOfWork: 'https://oer.community/tagungen' }),
+    '',
+    PK,
+    RELAY,
+  )
+  assertEquals(tags(ev, 'a'), [['a', `30023:${PK}:tagungen`, '', 'translation']])
+})
+
+Deno.test('fremder Host und kaputte URL ergeben kein a-Tag', () => {
+  const ev = buildArticleEvent(
+    meta({ id: 'https://oer.community/tagungen', workTranslation: ['https://example.org/en/conference', 'nicht-url'] }),
+    '',
+    PK,
+    RELAY,
+  )
+  assertEquals(tags(ev, 'a'), [])
+})
