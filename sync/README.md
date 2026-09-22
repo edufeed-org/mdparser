@@ -51,7 +51,7 @@ Connectet den Bunker (erste App-Approval nötig), signiert beide Events, publish
 - `d`-Tag = letzter Pfadteil von `commonMetadata.id` (z.B. `https://oer.community/foo` → `foo`)
 - Identischer `d`-Tag für 30023 und 30142 — Adresse ist `kind:pubkey:d`, kollidiert nicht
 - `a`-Cross-Refs zwischen 30023 und 30142 (Marker `content` bzw. `amb-metadata`)
-- Kind 30142 wird **nur** erstellt, wenn `type: LearningResource`
+- Kind 30142 wird **nur** erstellt, wenn `type: LearningResource`; fehlt der Typ, wird ein noch auf dem AMB-Relay liegendes 30142 des eigenen Keys per kind:5 zurückgezogen (`core/amb-rueckzug.ts`)
 - `published_at` aus YAML `datePublished`, `created_at` = Sync-Zeitpunkt (Replaceable Events)
 
 ## Verwandte Dokumente

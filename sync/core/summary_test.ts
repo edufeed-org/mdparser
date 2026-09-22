@@ -107,3 +107,42 @@ Deno.test('writeStepSummary — schreibt an die Datei aus der Env-Var', async ()
     await Deno.remove(tmp)
   }
 })
+
+Deno.test('renderSummary — zurückgezogene 30142 stehen in eigenem Abschnitt', () => {
+  const md = renderSummary({
+    mode: 'diff',
+    dryRun: false,
+    results: [
+      result('canva', 'ok', { ambRueckzug: { status: 'zurueckgezogen', eventId: 'a'.repeat(64) } }),
+      result('b', 'ok', { ambRueckzug: { status: 'nichts' } }),
+    ],
+  })
+  assertStringIncludes(md, '### 🗑️ AMB-Metadaten zurückgezogen')
+  assertStringIncludes(md, '- de/canva')
+  assertEquals(md.includes('- de/b —'), false)
+})
+
+Deno.test('renderSummary — fehlgeschlagener Rückzug steht unter Fehlgeschlagen', () => {
+  const md = renderSummary({
+    mode: 'diff',
+    dryRun: false,
+    results: [
+      result('canva', 'failed-publish', {
+        reason: '30142-Rückzug: kind 5: 0/1 acks',
+        ambRueckzug: { status: 'fehlgeschlagen', grund: 'kind 5: 0/1 acks' },
+      }),
+    ],
+  })
+  assertStringIncludes(md, '### ❌ Fehlgeschlagen')
+  assertStringIncludes(md, 'de/canva — 30142-Rückzug: kind 5: 0/1 acks')
+})
+
+Deno.test('renderSummary — dry-run nennt den Rückzug im Konjunktiv', () => {
+  const md = renderSummary({
+    mode: 'diff',
+    dryRun: true,
+    results: [result('canva', 'ok', { ambRueckzug: { status: 'wuerde' } })],
+  })
+  assertStringIncludes(md, 'würden zurückgezogen')
+  assertStringIncludes(md, '- de/canva')
+})

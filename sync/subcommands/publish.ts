@@ -2,7 +2,7 @@ import { parseArgs } from 'jsr:@std/cli@^1.0.6/parse-args'
 import { resolve } from 'jsr:@std/path@^1.0.0'
 import { nip19 } from 'nostr-tools'
 import { type Config, loadConfig } from '../core/config.ts'
-import { parseMarkdown } from '../core/parser.ts'
+import { extractSlug, parseMarkdown } from '../core/parser.ts'
 import { validatePost } from '../core/validation.ts'
 import { allContentFiles, type ContentFile } from '../core/discover.ts'
 import { changedContentFiles } from '../core/change-detection.ts'
@@ -10,12 +10,17 @@ import { AMB_RELAYS, ARTICLE_RELAYS, type PublishResult, publishToRelays } from 
 import { createBunkerSigner, type Signer } from '../core/signer.ts'
 import { buildArticleEvent } from '../events/article.ts'
 import { buildAmbEvent } from '../events/amb.ts'
+import {
+  ambZurueckziehen,
+  type RueckzugErgebnis,
+  standardRueckzugDeps,
+} from '../core/amb-rueckzug.ts'
 import { createLogger } from '../core/log.ts'
 import { isSilentNoop, renderSummary, writeStepSummary } from '../core/summary.ts'
 import {
   bilddateien,
-  bilderSchritt,
   type BilderErgebnis,
+  bilderSchritt,
   bildUrls,
   postDirVon,
   standardDeps,
@@ -44,6 +49,8 @@ export interface PostResult {
   ambAcks?: PublishResult[]
   /** Bilderschritt (core/bilder.ts): Uploads, Nachweise, Warnungen — blockiert nie. */
   bilder?: BilderErgebnis
+  /** Rückzug eines alten 30142, wenn der Beitrag keine Lernressource mehr ist (core/amb-rueckzug.ts). */
+  ambRueckzug?: RueckzugErgebnis
 }
 
 function countOkAcks(results: PublishResult[] | undefined): number {
@@ -107,16 +114,32 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
     ? buildAmbEvent(parsed.metadata, pubkey, ARTICLE_HINT_RELAY)
     : null
 
+  // Kein 30142 ohne type: Liegt zu diesem Beitrag noch ein AMB-Event auf dem
+  // Relay, wird es zurückgezogen (kind 5). Seiten haben nie eines.
+  const rueckzug = () =>
+    !amb && file.type === 'post' && parsed.metadata.id
+      ? ambZurueckziehen(
+        extractSlug(parsed.metadata.id),
+        standardRueckzugDeps(deps.signer, pubkey, deps.dryRun),
+      )
+      : Promise.resolve(undefined)
+
   if (deps.dryRun) {
     const dTag = article.tags.find((t) => t[0] === 'd')?.[1] ?? ''
+    const ambRueckzug = await rueckzug()
+    const ambText = amb
+      ? '30142'
+      : ambRueckzug?.status === 'wuerde'
+      ? '30142 zurückziehen'
+      : 'kein 30142'
     return {
       file,
       status: 'ok',
       missingRecommended,
       bilder,
-      reason: `dry-run: würde 30023 (${dTag}) + ${
-        amb ? '30142' : 'kein 30142'
-      } an ${ARTICLE_RELAYS.length}/${AMB_RELAYS.length} Relays publishen`,
+      ambRueckzug,
+      reason:
+        `dry-run: würde 30023 (${dTag}) + ${ambText} an ${ARTICLE_RELAYS.length}/${AMB_RELAYS.length} Relays publishen`,
     }
   }
 
@@ -185,6 +208,19 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
     }
   }
 
+  const ambRueckzug = await rueckzug()
+  if (ambRueckzug?.status === 'fehlgeschlagen') {
+    return {
+      file,
+      status: 'failed-publish',
+      reason: `30142-Rückzug: ${ambRueckzug.grund}`,
+      bilder,
+      articleEventId: signedArticle.id,
+      articleAcks,
+      ambRueckzug,
+    }
+  }
+
   return {
     file,
     status: 'ok',
@@ -194,7 +230,17 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
     articleAcks,
     ambEventId,
     ambAcks,
+    ambRueckzug,
   }
+}
+
+function rueckzugText(r: RueckzugErgebnis): string {
+  if (r.status === 'wuerde') return 'altes 30142 würde zurückgezogen (kind 5)'
+  if (r.status === 'zurueckgezogen') {
+    return `altes 30142 zurückgezogen (kind 5, id=${r.eventId?.slice(0, 12)}…)`
+  }
+  if (r.status === 'fehlgeschlagen') return `Rückzug des alten 30142 fehlgeschlagen: ${r.grund}`
+  return ''
 }
 
 interface PublishFlags {
@@ -320,11 +366,18 @@ export async function runPublish(args: string[]): Promise<number> {
         }`,
       )
     }
+    if (r.ambRueckzug && r.ambRueckzug.status !== 'nichts') {
+      console.log(`   ${rueckzugText(r.ambRueckzug)}`)
+    }
     if (r.bilder) {
       const b = r.bilder
       const teile = [
-        b.hochgeladen.length ? `${b.hochgeladen.length} Blob(s) ${dryRun ? 'würden hochgeladen' : 'hochgeladen'}` : '',
-        b.nachweise.length ? `${b.nachweise.length} Nachweis(e) ${dryRun ? 'würden geprägt' : 'geprägt'}` : '',
+        b.hochgeladen.length
+          ? `${b.hochgeladen.length} Blob(s) ${dryRun ? 'würden hochgeladen' : 'hochgeladen'}`
+          : '',
+        b.nachweise.length
+          ? `${b.nachweise.length} Nachweis(e) ${dryRun ? 'würden geprägt' : 'geprägt'}`
+          : '',
         b.unveraendert.length ? `${b.unveraendert.length} unverändert` : '',
       ].filter(Boolean)
       if (teile.length) console.log(`   bilder: ${teile.join(', ')}`)

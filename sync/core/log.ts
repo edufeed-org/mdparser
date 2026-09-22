@@ -13,6 +13,7 @@ export interface PostLog {
   ambEventId?: string
   articleAcks?: { relay: string; ok: boolean; message?: string }[]
   ambAcks?: { relay: string; ok: boolean; message?: string }[]
+  ambRueckzug?: { status: string; eventId?: string; grund?: string }
 }
 
 export interface RunSummary {
@@ -58,6 +59,7 @@ function toPostLog(r: PostResult, contentRoot: string): PostLog {
       message: a.message,
     })),
     ambAcks: r.ambAcks?.map((a) => ({ relay: a.relay, ok: a.ok, message: a.message })),
+    ambRueckzug: r.ambRueckzug,
   }
 }
 

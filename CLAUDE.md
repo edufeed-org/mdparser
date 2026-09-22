@@ -22,7 +22,9 @@ mdparser liest Hugo-artige Markdown-Trees mit `commonMetadata`-Frontmatter
 und publiziert Posts und Pages als Nostr-Events:
 
 - **Kind 30023** (Long-form Content) → Article-Relays
-- **Kind 30142** (AMB-Metadaten) → AMB-Relay, nur wenn `type: LearningResource`
+- **Kind 30142** (AMB-Metadaten) → AMB-Relay, nur wenn `type: LearningResource`.
+  Verliert ein Beitrag den Typ, zieht `publish` ein noch liegendes 30142 per
+  kind:5 (NIP-09) zurück — `core/amb-rueckzug.ts`, seit 2026-09-22.
 
 Bilder liegen auf Blossom (Hash-URL, Git trägt die URL). `events/article.ts`
 leitet daraus die `x`-Tags ab — das erste für das Cover, je Fließtextbild mit

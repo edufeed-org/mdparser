@@ -74,6 +74,22 @@ export function renderSummary(input: SummaryInput): string {
     out.push('')
   }
 
+  // Kein 30142 ohne type: alte AMB-Events, die der Lauf zurückgezogen hat.
+  const zurueckgezogen = results.filter(
+    (r) => r.ambRueckzug?.status === 'wuerde' || r.ambRueckzug?.status === 'zurueckgezogen',
+  )
+  if (zurueckgezogen.length > 0) {
+    out.push('### 🗑️ AMB-Metadaten zurückgezogen')
+    out.push('')
+    out.push(
+      `Alte 30142-Events ${dryRun ? 'würden zurückgezogen' : 'wurden per kind:5 zurückgezogen'} ` +
+        '(kein `type: LearningResource` mehr):',
+    )
+    out.push('')
+    for (const r of zurueckgezogen) out.push(`- ${r.file.lang}/${r.file.slug}`)
+    out.push('')
+  }
+
   if (recommended.length > 0) {
     out.push('### 💡 Publiziert, aber Metadaten unvollstaendig')
     out.push('')
