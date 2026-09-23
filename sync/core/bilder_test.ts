@@ -1,11 +1,11 @@
 import { assert, assertEquals } from 'jsr:@std/assert@^1.0.0'
 import {
+  type BilderDeps,
   bilderSchritt,
   bildUrls,
   eintragFuer,
   nachweisEvent,
   nachweisGleich,
-  type BilderDeps,
 } from './bilder.ts'
 import type { CommonMetadata } from './parser.ts'
 
@@ -50,36 +50,67 @@ Deno.test('eintragFuer: Dateiname, Hash-URL oder URL mit gleichem Hash', () => {
 
 Deno.test('nachweisEvent: Abbildung der Konventionsnamen auf 1063-Tags', () => {
   const ev = nachweisEvent({
-    url: U1, hash: H1, mime: 'image/jpeg', groesse: 123, pubkey: PK,
+    url: U1,
+    hash: H1,
+    mime: 'image/jpeg',
+    groesse: 123,
+    pubkey: PK,
     eintrag: {
-      alt: 'Alt', title: 'Titel', author: 'FOERBICO', authorUrl: 'https://oer.community',
-      licenceUrl: 'https://creativecommons.org/licenses/by/4.0/', sourceUrl: 'https://oer.community/t',
-      modification: 'beschnitten', pubkey: 'd'.repeat(64),
+      alt: 'Alt',
+      title: 'Titel',
+      author: 'FOERBICO',
+      authorUrl: 'https://oer.community',
+      licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
+      sourceUrl: 'https://oer.community/t',
+      modification: 'beschnitten',
+      pubkey: 'd'.repeat(64),
     },
   })
   assertEquals(ev.kind, 1063)
   assertEquals(ev.content, '')
   assertEquals(ev.tags, [
-    ['url', U1], ['x', H1], ['m', 'image/jpeg'], ['size', '123'],
-    ['title', 'Titel'], ['license', 'https://creativecommons.org/licenses/by/4.0/'],
-    ['credit', 'FOERBICO'], ['alt', 'Alt'],
-    ['source', 'https://oer.community/t'], ['authorUrl', 'https://oer.community'],
-    ['modification', 'beschnitten'], ['p', 'd'.repeat(64)],
+    ['url', U1],
+    ['x', H1],
+    ['m', 'image/jpeg'],
+    ['size', '123'],
+    ['title', 'Titel'],
+    ['license', 'https://creativecommons.org/licenses/by/4.0/'],
+    ['credit', 'FOERBICO'],
+    ['alt', 'Alt'],
+    ['source', 'https://oer.community/t'],
+    ['authorUrl', 'https://oer.community'],
+    ['modification', 'beschnitten'],
+    ['p', 'd'.repeat(64)],
   ])
 })
 
 Deno.test('nachweisEvent: ohne Datei entfallen m und size, alt fällt auf title zurück', () => {
-  const ev = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { title: 'T', licenceUrl: 'https://l' } })
+  const ev = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { title: 'T', licenceUrl: 'https://l' },
+  })
   assertEquals(ev.tags.find((t) => t[0] === 'm'), undefined)
   assertEquals(ev.tags.find((t) => t[0] === 'size'), undefined)
   assertEquals(ev.tags.find((t) => t[0] === 'alt')?.[1], 'T')
 })
 
 Deno.test('nachweisGleich: nur die Tags zählen', () => {
-  const a = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { alt: 'x', licenceUrl: 'https://l' } })
+  const a = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { alt: 'x', licenceUrl: 'https://l' },
+  })
   const b = { ...a, created_at: a.created_at + 100, id: 'e', sig: 's' }
   assert(nachweisGleich(a, b))
-  const c = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { alt: 'y', licenceUrl: 'https://l' } })
+  const c = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { alt: 'y', licenceUrl: 'https://l' },
+  })
   assert(!nachweisGleich(a, c))
 })
 
@@ -94,7 +125,14 @@ interface Welt {
 }
 
 function welt(over: Partial<Welt> = {}): { w: Welt; deps: BilderDeps } {
-  const w: Welt = { blobs: new Set(), nachweise: {}, hochgeladen: [], publiziert: [], signiert: [], ...over }
+  const w: Welt = {
+    blobs: new Set(),
+    nachweise: {},
+    hochgeladen: [],
+    publiziert: [],
+    signiert: [],
+    ...over,
+  }
   const deps: BilderDeps = {
     pubkey: PK,
     dryRun: false,
@@ -120,12 +158,28 @@ function welt(over: Partial<Welt> = {}): { w: Welt; deps: BilderDeps } {
   return { w, deps }
 }
 
-const DATEIEN = new Map([[H1, { datei: 'bild.jpeg', hash: H1, mime: 'image/jpeg', groesse: 3, bytes: new Uint8Array(3) }]])
-const BLOCK = { 'bild.jpeg': { alt: 'A', author: 'FOERBICO', licenceUrl: 'https://creativecommons.org/licenses/by/4.0/' } }
+const DATEIEN = new Map([[H1, {
+  datei: 'bild.jpeg',
+  hash: H1,
+  mime: 'image/jpeg',
+  groesse: 3,
+  bytes: new Uint8Array(3),
+}]])
+const BLOCK = {
+  'bild.jpeg': {
+    alt: 'A',
+    author: 'FOERBICO',
+    licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
+  },
+}
 
 Deno.test('bilderSchritt: Blob fehlt, Datei da → hochladen; kein Nachweis → prägen', async () => {
   const { w, deps } = welt()
-  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: BLOCK }, DATEIEN, deps)
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U1 }), content: '', bilder: BLOCK },
+    DATEIEN,
+    deps,
+  )
   assertEquals(w.hochgeladen, [H1])
   assertEquals(w.publiziert, [H1])
   assertEquals(w.signiert, [24242, 1063].filter((k) => k !== 24242)) // Upload signiert im hochladen-Stub, hier nur das 1063
@@ -136,26 +190,50 @@ Deno.test('bilderSchritt: Blob fehlt, Datei da → hochladen; kein Nachweis → 
 
 Deno.test('bilderSchritt: alles da und Nachweis unverändert → nichts zu tun', async () => {
   const bestehend = nachweisEvent({
-    url: U1, hash: H1, mime: 'image/jpeg', groesse: 3, pubkey: PK, eintrag: BLOCK['bild.jpeg'],
+    url: U1,
+    hash: H1,
+    mime: 'image/jpeg',
+    groesse: 3,
+    pubkey: PK,
+    eintrag: BLOCK['bild.jpeg'],
   })
   const { w, deps } = welt({ blobs: new Set([H1]), nachweise: { [H1]: bestehend } })
-  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: BLOCK }, DATEIEN, deps)
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U1 }), content: '', bilder: BLOCK },
+    DATEIEN,
+    deps,
+  )
   assertEquals(w.hochgeladen, [])
   assertEquals(w.publiziert, [])
   assertEquals(r.unveraendert, [H1])
 })
 
 Deno.test('bilderSchritt: geänderter Block → neuer Nachweis, alter bleibt liegen', async () => {
-  const alt = nachweisEvent({ url: U1, hash: H1, mime: 'image/jpeg', groesse: 3, pubkey: PK, eintrag: { alt: 'alt', licenceUrl: 'https://l' } })
+  const alt = nachweisEvent({
+    url: U1,
+    hash: H1,
+    mime: 'image/jpeg',
+    groesse: 3,
+    pubkey: PK,
+    eintrag: { alt: 'alt', licenceUrl: 'https://l' },
+  })
   const { w, deps } = welt({ blobs: new Set([H1]), nachweise: { [H1]: alt } })
-  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: BLOCK }, DATEIEN, deps)
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U1 }), content: '', bilder: BLOCK },
+    DATEIEN,
+    deps,
+  )
   assertEquals(w.publiziert, [H1])
   assertEquals(r.nachweise, [H1])
 })
 
 Deno.test('bilderSchritt: Blob fehlt ohne lokale Datei → Warnung, kein Abbruch', async () => {
   const { w, deps } = welt()
-  const r = await bilderSchritt({ metadata: meta({ image: U2 }), content: '', bilder: {} }, DATEIEN, deps)
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U2 }), content: '', bilder: {} },
+    DATEIEN,
+    deps,
+  )
   assertEquals(w.hochgeladen, [])
   assert(r.warnungen.some((x) => x.includes(H2.slice(0, 8)) && x.includes('Blossom')))
   assert(r.warnungen.some((x) => x.includes('# bilder')))
@@ -174,7 +252,11 @@ Deno.test('bilderSchritt: Eintrag ohne licenceUrl → Warnung statt Nachweis', a
 
 Deno.test('bilderSchritt: dry-run meldet, was passieren würde, und rührt nichts an', async () => {
   const { w, deps } = welt()
-  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: BLOCK }, DATEIEN, { ...deps, dryRun: true, signer: null })
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U1 }), content: '', bilder: BLOCK },
+    DATEIEN,
+    { ...deps, dryRun: true, signer: null },
+  )
   assertEquals(w.hochgeladen, [])
   assertEquals(w.publiziert, [])
   assertEquals(r.hochgeladen, [H1])
@@ -184,7 +266,11 @@ Deno.test('bilderSchritt: dry-run meldet, was passieren würde, und rührt nicht
 Deno.test('bilderSchritt: Fehler beim Upload wird Warnung, der Nachweis kommt trotzdem', async () => {
   const { w, deps } = welt()
   deps.hochladen = () => Promise.reject(new Error('HTTP 413'))
-  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: BLOCK }, DATEIEN, deps)
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U1 }), content: '', bilder: BLOCK },
+    DATEIEN,
+    deps,
+  )
   assert(r.warnungen.some((x) => x.includes('HTTP 413')))
   assertEquals(w.publiziert, [H1])
 })
@@ -198,21 +284,45 @@ Deno.test('bilderSchritt: ohne Hash-URLs passiert nichts', async () => {
 // --- KI-Kennzeichnung (edufeed-Wiki license-events-nope, 2026-09-10): ai = generated | modified ---
 
 Deno.test('nachweisEvent: ai → ai-Tag als letzter Tag, nur generated oder modified', () => {
-  const gen = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { licenceUrl: 'https://l', ai: 'generated', pubkey: 'd'.repeat(64) } })
+  const gen = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { licenceUrl: 'https://l', ai: 'generated', pubkey: 'd'.repeat(64) },
+  })
   assertEquals(gen.tags.at(-1), ['ai', 'generated'])
-  const mod = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { licenceUrl: 'https://l', ai: 'modified' } })
+  const mod = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { licenceUrl: 'https://l', ai: 'modified' },
+  })
   assertEquals(mod.tags.at(-1), ['ai', 'modified'])
-  const ohne = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { licenceUrl: 'https://l' } })
+  const ohne = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { licenceUrl: 'https://l' },
+  })
   assertEquals(ohne.tags.find((t) => t[0] === 'ai'), undefined)
   // Fremder Wert: kein Tag — Leser würden ihn ohnehin ignorieren
-  const falsch = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: { licenceUrl: 'https://l', ai: 'ja' as never } })
+  const falsch = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { licenceUrl: 'https://l', ai: 'ja' as never },
+  })
   assertEquals(falsch.tags.find((t) => t[0] === 'ai'), undefined)
 })
 
 Deno.test('bilderSchritt: ungültiger ai-Wert → Warnung, Nachweis kommt trotzdem ohne ai-Tag', async () => {
   const { w, deps } = welt({ blobs: new Set([H1]) })
   const block = { 'bild.jpeg': { ...BLOCK['bild.jpeg'], ai: 'KI' as never } }
-  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: block }, DATEIEN, deps)
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U1 }), content: '', bilder: block },
+    DATEIEN,
+    deps,
+  )
   assertEquals(r.nachweise, [H1])
   assertEquals(w.publiziert, [H1])
   assertEquals(r.warnungen.length, 1)
@@ -220,10 +330,57 @@ Deno.test('bilderSchritt: ungültiger ai-Wert → Warnung, Nachweis kommt trotzd
 })
 
 Deno.test('bilderSchritt: ai ergänzt → bestehender Nachweis gilt als geändert, neuer wird geprägt', async () => {
-  const alt = nachweisEvent({ url: U1, hash: H1, pubkey: PK, eintrag: BLOCK['bild.jpeg'], mime: 'image/jpeg', groesse: 3 })
+  const alt = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: BLOCK['bild.jpeg'],
+    mime: 'image/jpeg',
+    groesse: 3,
+  })
   const { w, deps } = welt({ blobs: new Set([H1]), nachweise: { [H1]: alt } })
   const block = { 'bild.jpeg': { ...BLOCK['bild.jpeg'], ai: 'generated' as const } }
-  const r = await bilderSchritt({ metadata: meta({ image: U1 }), content: '', bilder: block }, DATEIEN, deps)
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U1 }), content: '', bilder: block },
+    DATEIEN,
+    deps,
+  )
   assertEquals(r.nachweise, [H1])
   assertEquals(w.publiziert, [H1])
+})
+
+// --- BUD-01-Auth: Base64 über UTF-8-Bytes, sonst bricht ein Umlaut im Dateinamen die Signatur ---
+
+Deno.test('blobHochladen: Authorization-Header ist Base64 der UTF-8-Bytes des Auth-Events', async () => {
+  const { blobHochladen } = await import('./bilder.ts')
+  const { decodeBase64 } = await import('jsr:@std/encoding@^1.0.5/base64')
+  let header = ''
+  const echtesFetch = globalThis.fetch
+  globalThis.fetch = ((_url: string | URL | Request, init?: RequestInit) => {
+    header = String((init?.headers as Record<string, string>)['Authorization'])
+    return Promise.resolve(new Response(JSON.stringify({ sha256: H1 }), { status: 200 }))
+  }) as typeof fetch
+  try {
+    const signer = {
+      getPublicKey: () => Promise.resolve(PK),
+      signEvent: (
+        ev: { kind: number; pubkey: string; created_at: number; tags: string[][]; content: string },
+      ) => Promise.resolve({ ...ev, id: '1'.repeat(64), sig: '2'.repeat(128) }),
+    }
+    await blobHochladen(
+      {
+        datei: 'Übersicht.png',
+        hash: H1,
+        mime: 'image/png',
+        groesse: 3,
+        bytes: new Uint8Array([1, 2, 3]),
+      },
+      signer,
+      PK,
+    )
+  } finally {
+    globalThis.fetch = echtesFetch
+  }
+  const json = new TextDecoder().decode(decodeBase64(header.replace(/^Nostr /, '')))
+  assertEquals(JSON.parse(json).content, 'Upload Übersicht.png')
 })

@@ -16,7 +16,14 @@
  */
 import { dirname, extname, join } from 'jsr:@std/path@^1.0.0'
 import { encodeHex } from 'jsr:@std/encoding@^1.0.5/hex'
-import { type BildMetadaten, type Bilder, type CommonMetadata, KI_WERTE, type KiWert } from './parser.ts'
+import { encodeBase64 } from 'jsr:@std/encoding@^1.0.5/base64'
+import {
+  type Bilder,
+  type BildMetadaten,
+  type CommonMetadata,
+  KI_WERTE,
+  type KiWert,
+} from './parser.ts'
 import { hashAusUrl, type UnsignedEvent } from '../events/article.ts'
 import type { SignedEvent, Signer } from './signer.ts'
 import { publishToRelays, readEvents } from './relays.ts'
@@ -26,8 +33,13 @@ export const BLOSSOM = 'https://blossom.edufeed.org'
 export const LICENSE_RELAYS = ['wss://relay-rpi.edufeed.org/', 'wss://relay.edufeed.org/'] as const
 
 const MIME: Record<string, string> = {
-  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif',
-  '.webp': 'image/webp', '.svg': 'image/svg+xml', '.avif': 'image/avif',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.avif': 'image/avif',
 }
 /** Bild-Syntax in Markdown — dieselbe Regex wie events/article.ts, md2blossom und der Hub. */
 const BILD = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g
@@ -122,7 +134,13 @@ export function nachweisEvent(e: NachweisEingabe): UnsignedEvent {
   if (l.modification) tags.push(['modification', l.modification])
   if (l.pubkey) tags.push(['p', l.pubkey])
   if (kiWertGueltig(l.ai)) tags.push(['ai', l.ai])
-  return { kind: 1063, pubkey: e.pubkey, created_at: Math.floor(Date.now() / 1000), tags, content: '' }
+  return {
+    kind: 1063,
+    pubkey: e.pubkey,
+    created_at: Math.floor(Date.now() / 1000),
+    tags,
+    content: '',
+  }
 }
 
 /** Nur die zwei Werte des Wikis sind bedeutungsvoll; alles andere ist „nicht deklariert". */
@@ -159,13 +177,21 @@ export async function blobHochladen(
   })
   const r = await fetch(`${blossom}/upload`, {
     method: 'PUT',
-    headers: { Authorization: 'Nostr ' + btoa(JSON.stringify(auth)), 'Content-Type': datei.mime },
+    // Base64 über UTF-8-Bytes: btoa kodiert Latin-1, ein Umlaut im Dateinamen machte die Signatur ungültig (Blossom 400).
+    headers: {
+      Authorization: 'Nostr ' + encodeBase64(new TextEncoder().encode(JSON.stringify(auth))),
+      'Content-Type': datei.mime,
+    },
     body: datei.bytes,
   })
   const text = await r.text()
-  if (!r.ok) throw new Error(`Blossom HTTP ${r.status}: ${r.headers.get('x-reason') ?? text.slice(0, 200)}`)
+  if (!r.ok) {
+    throw new Error(`Blossom HTTP ${r.status}: ${r.headers.get('x-reason') ?? text.slice(0, 200)}`)
+  }
   const antwort = JSON.parse(text) as { sha256?: string }
-  if (antwort.sha256 !== datei.hash) throw new Error(`Blossom meldet anderen Hash: ${antwort.sha256}`)
+  if (antwort.sha256 !== datei.hash) {
+    throw new Error(`Blossom meldet anderen Hash: ${antwort.sha256}`)
+  }
 }
 
 /** Jüngster Nachweis des eigenen Keys zu einem Hash, oder null. */
@@ -212,7 +238,8 @@ export function standardDeps(signer: Signer | null, pubkey: string, dryRun: bool
       return blobHochladen(datei, signer, pubkey)
     },
     letzterNachweis: (hash) => letzterNachweis(hash, pubkey),
-    publizieren: async (ev) => (await publishToRelays([...LICENSE_RELAYS], ev)).filter((a) => a.ok).length,
+    publizieren: async (ev) =>
+      (await publishToRelays([...LICENSE_RELAYS], ev)).filter((a) => a.ok).length,
   }
 }
 
@@ -232,7 +259,11 @@ export async function bilderSchritt(
     try {
       if (!(await deps.blobVorhanden(hash))) {
         if (!datei) {
-          r.warnungen.push(`${kurz(hash)}: Blob fehlt auf Blossom und keine Datei mit diesem Hash im Ordner (${url})`)
+          r.warnungen.push(
+            `${
+              kurz(hash)
+            }: Blob fehlt auf Blossom und keine Datei mit diesem Hash im Ordner (${url})`,
+          )
         } else if (deps.dryRun) {
           r.hochgeladen.push(hash)
         } else {
@@ -241,7 +272,11 @@ export async function bilderSchritt(
         }
       }
     } catch (err) {
-      r.warnungen.push(`${kurz(hash)}: Upload von ${name} fehlgeschlagen — ${err instanceof Error ? err.message : String(err)}`)
+      r.warnungen.push(
+        `${kurz(hash)}: Upload von ${name} fehlgeschlagen — ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      )
     }
 
     // 2. Nachweis
@@ -256,11 +291,18 @@ export async function bilderSchritt(
     }
     if (eintrag.ai !== undefined && !kiWertGueltig(eintrag.ai)) {
       r.warnungen.push(
-        `${kurz(hash)}: ai-Wert „${String(eintrag.ai)}" für ${name} unbekannt (erlaubt: ${KI_WERTE.join(', ')}) — Nachweis ohne ai-Tag`,
+        `${kurz(hash)}: ai-Wert „${String(eintrag.ai)}" für ${name} unbekannt (erlaubt: ${
+          KI_WERTE.join(', ')
+        }) — Nachweis ohne ai-Tag`,
       )
     }
     const soll = nachweisEvent({
-      url, hash, pubkey: deps.pubkey, eintrag, mime: datei?.mime, groesse: datei?.groesse,
+      url,
+      hash,
+      pubkey: deps.pubkey,
+      eintrag,
+      mime: datei?.mime,
+      groesse: datei?.groesse,
     })
     try {
       const ist = await deps.letzterNachweis(hash)
@@ -278,7 +320,11 @@ export async function bilderSchritt(
       if (acks === 0) throw new Error('kein Relay hat den Nachweis angenommen')
       r.nachweise.push(hash)
     } catch (err) {
-      r.warnungen.push(`${kurz(hash)}: Nachweis für ${name} nicht publiziert — ${err instanceof Error ? err.message : String(err)}`)
+      r.warnungen.push(
+        `${kurz(hash)}: Nachweis für ${name} nicht publiziert — ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      )
     }
   }
   return r
