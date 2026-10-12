@@ -17,7 +17,10 @@ const NULL_SHA = '0000000000000000000000000000000000000000'
 export const defaultGitRunner: GitRunner = {
   async diffNames({ from, to, cwd }) {
     const cmd = new Deno.Command('git', {
-      args: ['-C', cwd, 'diff', '--name-only', '--relative', from, to],
+      // core.quotepath=off: sonst kommen Pfade mit Umlauten als "de/posts/M\303\274nster" (in
+      // Anführungszeichen, oktal maskiert) zurück, matchen keine Datei und der Beitrag wird
+      // stillschweigend übersprungen (passiert am 2026-10-12 bei fünf Beiträgen).
+      args: ['-C', cwd, '-c', 'core.quotepath=off', 'diff', '--name-only', '--relative', from, to],
       stdout: 'piped',
       stderr: 'piped',
     })

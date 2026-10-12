@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from 'jsr:@std/assert@^1.0.0'
 import { join } from 'jsr:@std/path@^1.0.0'
-import { changedContentFiles, type GitRunner } from './change-detection.ts'
+import { changedContentFiles, defaultGitRunner, type GitRunner } from './change-detection.ts'
 
 async function buildFixture(): Promise<string> {
   const root = await Deno.makeTempDir({ prefix: 'mdparser-changes-' })
@@ -149,4 +149,30 @@ Deno.test('changedContentFiles — leeres from wirft', async () => {
     Error,
     'leer oder null-SHA',
   )
+})
+
+// --- Echtes git: Pfade mit Umlauten dürfen nicht als "de/posts/M\303\274nster" (core.quotepath) zurückkommen ---
+
+Deno.test('defaultGitRunner — Umlaut-Pfade kommen unquotiert zurück', async () => {
+  const dir = await Deno.makeTempDir()
+  const git = async (...args: string[]) => {
+    const { code, stderr } = await new Deno.Command('git', {
+      args: ['-C', dir, ...args],
+      stdout: 'piped',
+      stderr: 'piped',
+    }).output()
+    if (code !== 0) throw new Error(new TextDecoder().decode(stderr))
+  }
+  await git('init', '-q')
+  await git('config', 'user.email', 't@example.org')
+  await git('config', 'user.name', 't')
+  await git('config', 'core.quotepath', 'true')
+  await Deno.mkdir(`${dir}/de/posts/2025-02-25-KLT-Münster`, { recursive: true })
+  await Deno.writeTextFile(`${dir}/de/posts/2025-02-25-KLT-Münster/index.md`, 'a')
+  await git('add', '.')
+  await git('commit', '-q', '-m', 'eins')
+  await Deno.writeTextFile(`${dir}/de/posts/2025-02-25-KLT-Münster/index.md`, 'b')
+  await git('commit', '-q', '-am', 'zwei')
+  const names = await defaultGitRunner.diffNames({ from: 'HEAD~1', to: 'HEAD', cwd: dir })
+  assertEquals(names, ['de/posts/2025-02-25-KLT-Münster/index.md'])
 })
