@@ -116,7 +116,8 @@ export interface NachweisEingabe {
  * modification als Zusatz-Tags ohne NIP-Standard. m und size nur, wenn die Datei
  * bekannt ist. ai→ai (generated | modified, edufeed-Wiki license-events-nope
  * vom 2026-09-10) als letzter Tag; ein anderer Wert ergibt keinen Tag — Leser
- * ignorieren ihn ohnehin und behandeln das Bild als nicht deklariert.
+ * ignorieren ihn ohnehin und behandeln das Bild als nicht deklariert. keywords→t
+ * (ein Tag je Schlagwort, lowercase) stehen davor.
  */
 export function nachweisEvent(e: NachweisEingabe): UnsignedEvent {
   const l = e.eintrag
@@ -133,6 +134,7 @@ export function nachweisEvent(e: NachweisEingabe): UnsignedEvent {
   if (l.authorUrl) tags.push(['authorUrl', l.authorUrl])
   if (l.modification) tags.push(['modification', l.modification])
   if (l.pubkey) tags.push(['p', l.pubkey])
+  for (const k of schlagworte(l.keywords)) tags.push(['t', k])
   if (kiWertGueltig(l.ai)) tags.push(['ai', l.ai])
   return {
     kind: 1063,
@@ -141,6 +143,23 @@ export function nachweisEvent(e: NachweisEingabe): UnsignedEvent {
     tags,
     content: '',
   }
+}
+
+/**
+ * Schlagworte aus dem Block als t-Tag-Werte: getrimmt, lowercase (NIP-24), ohne
+ * führendes #, ohne Leere und Dubletten, Reihenfolge erhalten. Ein einzelner
+ * String gilt als ein Schlagwort; alles andere als keine Angabe. Deutsch und
+ * Englisch stehen ohne Sprachmarker nebeneinander (Issue kind-1063-Schlagworte).
+ */
+export function schlagworte(w: unknown): string[] {
+  const liste = Array.isArray(w) ? w : typeof w === 'string' ? [w] : []
+  const out: string[] = []
+  for (const k of liste) {
+    if (typeof k !== 'string') continue
+    const v = k.trim().replace(/^#+/, '').toLowerCase()
+    if (v && !out.includes(v)) out.push(v)
+  }
+  return out
 }
 
 /** Nur die zwei Werte des Wikis sind bedeutungsvoll; alles andere ist „nicht deklariert". */

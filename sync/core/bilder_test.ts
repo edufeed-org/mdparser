@@ -6,6 +6,7 @@ import {
   eintragFuer,
   nachweisEvent,
   nachweisGleich,
+  schlagworte,
 } from './bilder.ts'
 import type { CommonMetadata } from './parser.ts'
 
@@ -383,4 +384,69 @@ Deno.test('blobHochladen: Authorization-Header ist Base64 der UTF-8-Bytes des Au
   }
   const json = new TextDecoder().decode(decodeBase64(header.replace(/^Nostr /, '')))
   assertEquals(JSON.parse(json).content, 'Upload Übersicht.png')
+})
+
+// --- Schlagworte: keywords im Block → t-Tags (NIP-24: lowercase), deutsch und englisch nebeneinander ---
+
+Deno.test('nachweisEvent: keywords → t-Tags lowercase, getrimmt, ohne Dubletten und Leere, vor ai', () => {
+  const ev = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: {
+      licenceUrl: 'https://l',
+      keywords: ['Kirche', ' church ', 'kirche', '', 'Barcamp'],
+      ai: 'generated',
+    },
+  })
+  const t = ev.tags.filter((x) => x[0] === 't')
+  assertEquals(t, [['t', 'kirche'], ['t', 'church'], ['t', 'barcamp']])
+  assertEquals(ev.tags.at(-1), ['ai', 'generated'])
+  assertEquals(ev.tags.indexOf(t[0]) > ev.tags.findIndex((x) => x[0] === 'license'), true)
+})
+
+Deno.test('nachweisEvent: ohne keywords kein t-Tag; ein einzelner String zählt als ein Schlagwort', () => {
+  const ohne = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { licenceUrl: 'https://l' },
+  })
+  assertEquals(ohne.tags.find((x) => x[0] === 't'), undefined)
+  const einzeln = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: { licenceUrl: 'https://l', keywords: 'Metadaten' as never },
+  })
+  assertEquals(einzeln.tags.filter((x) => x[0] === 't'), [['t', 'metadaten']])
+})
+
+Deno.test('schlagworte: normalisiert eine Liste zu lowercase-Hashtags ohne führendes #', () => {
+  assertEquals(schlagworte(['#OER', 'oer', 'Open Educational Resources']), [
+    'oer',
+    'open educational resources',
+  ])
+  assertEquals(schlagworte(undefined), [])
+  assertEquals(schlagworte(42 as never), [])
+})
+
+Deno.test('bilderSchritt: keywords ergänzt → bestehender Nachweis gilt als geändert, neuer wird geprägt', async () => {
+  const alt = nachweisEvent({
+    url: U1,
+    hash: H1,
+    pubkey: PK,
+    eintrag: BLOCK['bild.jpeg'],
+    mime: 'image/jpeg',
+    groesse: 3,
+  })
+  const { w, deps } = welt({ blobs: new Set([H1]), nachweise: { [H1]: alt } })
+  const block = { 'bild.jpeg': { ...BLOCK['bild.jpeg'], keywords: ['kirche', 'church'] } }
+  const r = await bilderSchritt(
+    { metadata: meta({ image: U1 }), content: '', bilder: block },
+    DATEIEN,
+    deps,
+  )
+  assertEquals(r.nachweise, [H1])
+  assertEquals(w.publiziert, [H1])
 })

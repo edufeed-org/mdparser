@@ -53,6 +53,8 @@ export interface BildMetadaten {
   pubkey?: string
   /** KI-Beteiligung nach edufeed-Wiki (EU-AI-Office-Icons): generated = vollständig KI-generiert, modified = mit KI bearbeitet. */
   ai?: KiWert
+  /** Schlagworte zur Erschließung (deutsch und englisch nebeneinander); werden zu t-Tags, lowercase nach NIP-24. */
+  keywords?: string[]
 }
 
 export const KI_WERTE = ['generated', 'modified'] as const
@@ -89,7 +91,9 @@ export function parseMarkdown(markdown: string): ParsedMarkdown | null {
   // `inLanguage: de` (String statt Liste) kam in 19 Beiträgen vor; `[0]` davon
   // ergab „d". Ein Mensch meint mit dem String dasselbe wie mit der Liste.
   if (typeof (parsed as { inLanguage?: unknown }).inLanguage === 'string') {
-    ;(parsed as { inLanguage: unknown }).inLanguage = [(parsed as { inLanguage: string }).inLanguage]
+    ;(parsed as { inLanguage: unknown }).inLanguage = [
+      (parsed as { inLanguage: string }).inLanguage,
+    ]
   }
 
   const bilder = bilderIndex >= 0 ? bilderBlockLesen(rawYaml, bilderIndex, ssgIndex) : undefined
