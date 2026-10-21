@@ -15,7 +15,7 @@ export const REDAKTION: Array<{ name: string; hex: string }> = [
   { name: 'Ludger', hex: '3c35fc4a95a306b4ca418d678d03c91376a759d4078043436d11095efa5a25c9' },
   { name: 'Jens', hex: 'f0a250fda57445e71fca119fdd6179ac3d915f043bb4594856e79a733145a00f' },
   { name: 'Steffen', hex: '1c5ff3caacd842c01dca8f378231b16617516d214da75c7aeabbe9e1efe9c0f6' },
-  { name: 'Gina', hex: 'd1f647c9ae5892bacdf2bb8288b319fb566de694479b032314b2a6e5edf31781' },
+  { name: 'Gina', hex: '1bf3806bd3f0af9f17a2afbc2478f5cbc4b0336db2dfb20984efbe9dfbbd0b47' }, // neuer Schlüssel seit 21.10.2026 (npub1r0ecq…)
   { name: 'Jörg', hex: '4fa5d1c413e2b45e10d40bf3562ab701a5331206e359c90baae0e99bfd6c6e41' },
 ]
 

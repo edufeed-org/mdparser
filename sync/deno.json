@@ -9,6 +9,8 @@
     "redaktion-dry": "deno run --env-file=../.env --allow-env --allow-read --allow-net cli.ts redaktion --dry-run",
     "navigation": "deno run --env-file=../.env --allow-env --allow-read --allow-net cli.ts navigation",
     "navigation-dry": "deno run --env-file=../.env --allow-env --allow-read --allow-net cli.ts navigation --dry-run",
+    "team": "deno run --env-file=../.env --allow-env --allow-read --allow-net cli.ts team",
+    "team-dry": "deno run --env-file=../.env --allow-env --allow-read --allow-net cli.ts team --dry-run",
     "dry-run-single": "deno run --env-file=../.env --allow-env --allow-read publish-single.ts --dry-run",
     "publish-single": "deno run --env-file=../.env --allow-env --allow-read --allow-net publish-single.ts"
   },

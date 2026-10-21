@@ -3,6 +3,7 @@ import { runPublish } from './subcommands/publish.ts'
 import { runValidatePost } from './subcommands/validate-post.ts'
 import { runRedaktion } from './subcommands/redaktion.ts'
 import { runNavigation } from './subcommands/navigation.ts'
+import { runTeam } from './subcommands/team.ts'
 
 function usage(): never {
   console.error('Usage: cli.ts <subcommand> [args…]')
@@ -12,6 +13,7 @@ function usage(): never {
   console.error('  validate-post <path>               — lokal validieren')
   console.error('  redaktion [--dry-run]              — Redaktionsliste (kind:30000 d=redaktion) publizieren')
   console.error('  navigation [--dry-run]             — Menü und Fußzeile (kind:30004) aus Website/navigation.yaml publizieren')
+  console.error('  team [--dry-run]                   — Team (kind:30000 d=team) aus Website/team.yaml publizieren')
   Deno.exit(2)
 }
 
@@ -28,6 +30,8 @@ async function main(): Promise<number> {
       return await runRedaktion(rest)
     case 'navigation':
       return await runNavigation(rest)
+    case 'team':
+      return await runTeam(rest)
     default:
       usage()
   }
