@@ -37,7 +37,12 @@ oder ein abweichender liegt. Warnungen (fehlender Block-Eintrag, fehlende
 Datei) stehen in der Job-Summary und blockieren das 30023 nicht.
 Ein Schreiber je Beitrag: nur `publish` schreibt Events des FOERBICO-Keys —
 der Regression-Wächter aus der Spec vom 07.09. entfällt deshalb; Rückschritte
-in Git fängt content-lint (C06/C07/V18, Blossom-Form) vor dem Merge.
+in Git fängt content-lint (C06/C07/V18, Blossom-Form) vor dem Merge —
+sofern es läuft: content-lint ist (Stand 09.11.2026) in keiner CI eingebunden.
+Darum löst `bildquellenAufloesen` (`core/bilder.ts`, seit 2026-11-09) vor dem
+Bilderschritt Dateinamen und URLs der eigenen Site (Host aus `id`) zur
+Blossom-URL auf, wenn die Datei im Beitragsordner liegt — nur im Event, mit
+Warnung „in Git nachziehen". Fremde Hosts und Hash-URLs bleiben unberührt.
 
 ## Projektstruktur
 
@@ -127,7 +132,8 @@ vorher still grün durch. Der Exit-Code bleibt bewusst 0.
 - `published_at` als Unix-Timestamp in Sekunden, aus YAML `datePublished`
 - `created_at` als Sync-Zeitpunkt (Replaceable Events)
 - `inLanguage` als BCP 47 (nicht NIP-32)
-- Bilder werden NICHT von sync hochgeladen — das macht die CI-Pipeline via Blossom (separat)
+- Bilder lädt `publish` selbst auf Blossom hoch (`core/bilder.ts`), lokale Bildquellen
+  löst es vorher zur Blossom-URL auf (`bildquellenAufloesen`, Warnung „in Git nachziehen")
 - `x`-Tags am 30023: erstes `x` = Cover-Hash (aus `image`), danach je Fließtextbild mit
   Hash-URL eines, dedupliziert. Kein `x` ohne Hash im Pfad, kein `imeta`
   (edufeed-Abstimmung 2026-09-07). Der `# bilder`-Block im Frontmatter (Konventionsnamen

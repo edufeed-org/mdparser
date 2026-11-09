@@ -87,6 +87,79 @@ export function bildUrls(metadata: CommonMetadata, content: string): BildUrl[] {
   return out
 }
 
+/**
+ * Lokale Bildquellen auf Blossom-URLs auflösen — das Netz unter der Regel
+ * „Git trägt die Blossom-URLs" (Spec 2026-09-07, Teil 3). Ein Beitrag, der am
+ * Editor und an md2blossom vorbei ins Repo kommt (Forgejo-Webformular), hat
+ * als Cover oder im Text einen Dateinamen oder eine URL der eigenen Site.
+ * Das 30023 trüge sie unverändert, edufeed zeigte kein Bild, der Bilderschritt
+ * sähe es nicht (narrt-Recap, 09.11.2026).
+ *
+ * Liegt eine Datei dieses Namens im Beitragsordner, tritt ihre Blossom-URL an
+ * die Stelle — dieselbe, die md2blossom in Git schreiben würde (Hash der Datei,
+ * Originalendung). Der Bilderschritt lädt den Blob dann hoch und prägt den
+ * Nachweis. Jede Ersetzung ist eine Warnung: Git muss nachgezogen werden.
+ * Fremde Hosts und Hash-URLs bleiben unberührt; ein Cover ohne Blossom-URL,
+ * das sich nicht auflösen lässt, ist ebenfalls eine Warnung.
+ */
+export function bildquellenAufloesen<T extends { metadata: CommonMetadata; content: string }>(
+  parsed: T,
+  dateien: Map<string, BildDatei>,
+): T & { warnungen: string[] } {
+  const warnungen: string[] = []
+  const nachName = new Map([...dateien.values()].map((d) => [d.datei.normalize('NFC'), d]))
+  const siteHost = (() => {
+    try {
+      return parsed.metadata.id ? new URL(parsed.metadata.id).host : null
+    } catch {
+      return null
+    }
+  })()
+
+  const aufloesen = (quelle: string): string | null => {
+    if (hashAusUrl(quelle)) return null
+    let name: string
+    try {
+      const u = new URL(quelle)
+      if (u.host !== siteHost) return null
+      name = u.pathname.split('/').pop() ?? ''
+    } catch {
+      if (/^[a-z][a-z0-9+.-]*:/i.test(quelle)) return null
+      name = quelle.replace(/^\.\//, '')
+      if (name.includes('/')) return null
+    }
+    try {
+      name = decodeURIComponent(name)
+    } catch { /* bleibt roh */ }
+    const d = nachName.get(name.normalize('NFC'))
+    return d ? `${BLOSSOM}/${d.hash}${extname(d.datei)}` : null
+  }
+
+  const metadata = { ...parsed.metadata }
+  if (metadata.image && !hashAusUrl(metadata.image)) {
+    const neu = aufloesen(metadata.image)
+    if (neu) {
+      warnungen.push(
+        `Cover ${metadata.image} → ${neu} (nur im Event; in Git nachziehen, md2blossom --write)`,
+      )
+      metadata.image = neu
+    } else {
+      warnungen.push(
+        `Cover ${metadata.image} ist keine Blossom-URL und keine Datei im Ordner — kein Nachweis`,
+      )
+    }
+  }
+
+  const content = parsed.content.replace(BILD, (m, _alt: string, src: string) => {
+    const neu = aufloesen(src)
+    if (!neu) return m
+    warnungen.push(`Bild ${src} → ${neu} (nur im Event; in Git nachziehen, md2blossom --write)`)
+    return m.replace(`](${src}`, `](${neu}`)
+  })
+
+  return { ...parsed, metadata, content, warnungen }
+}
+
 /** Eintrag im Block: unter dem Dateinamen, der URL oder einer URL mit demselben Hash. */
 export function eintragFuer(
   bilder: Bilder | undefined,

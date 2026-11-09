@@ -1,7 +1,9 @@
 import { assert, assertEquals } from 'jsr:@std/assert@^1.0.0'
 import {
+  type BildDatei,
   type BilderDeps,
   bilderSchritt,
+  bildquellenAufloesen,
   bildUrls,
   eintragFuer,
   nachweisEvent,
@@ -449,4 +451,62 @@ Deno.test('bilderSchritt: keywords ergänzt → bestehender Nachweis gilt als ge
   )
   assertEquals(r.nachweise, [H1])
   assertEquals(w.publiziert, [H1])
+})
+
+// --- Lokale Bildquellen auflösen (Beitrag ohne Blossom-URL in Git, narrt-Recap 09.11.2026) ---
+
+function datei(name: string, hash: string): BildDatei {
+  return { datei: name, hash, mime: 'image/jpeg', groesse: 3, bytes: new Uint8Array(3) }
+}
+const ORDNER = new Map([[H1, datei('foto.jpg', H1)], [H2, datei('Grüße am See.png', H2)]])
+const B1 = `https://blossom.edufeed.org/${H1}.jpg`
+const B2 = `https://blossom.edufeed.org/${H2}.png`
+
+Deno.test('bildquellenAufloesen: Cover als Dateiname → Blossom-URL der Datei, mit Warnung', () => {
+  const r = bildquellenAufloesen({ metadata: meta({ image: 'foto.jpg' }), content: '' }, ORDNER)
+  assertEquals(r.metadata.image, B1)
+  assertEquals(r.warnungen.length, 1)
+  assert(r.warnungen[0].includes('foto.jpg'))
+})
+
+Deno.test('bildquellenAufloesen: Cover als URL der eigenen Site (auch falscher Pfad) → Blossom-URL', () => {
+  for (
+    const image of [
+      'https://oer.community/t/foto.jpg',
+      'https://oer.community/foto.jpg',
+      './foto.jpg',
+    ]
+  ) {
+    const r = bildquellenAufloesen({ metadata: meta({ image }), content: '' }, ORDNER)
+    assertEquals(r.metadata.image, B1, image)
+  }
+})
+
+Deno.test('bildquellenAufloesen: Fließtextbilder relativ → Blossom-URL, Titel und Rest bleiben', () => {
+  const content = 'A ![Foto](foto.jpg "Titel") B ![See](Gr%C3%BC%C3%9Fe%20am%20See.png) C'
+  const r = bildquellenAufloesen({ metadata: meta(), content }, ORDNER)
+  assertEquals(r.content, `A ![Foto](${B1} "Titel") B ![See](${B2}) C`)
+  assertEquals(r.warnungen.length, 2)
+})
+
+Deno.test('bildquellenAufloesen: Hash-URLs und fremde Hosts bleiben unberührt, ohne Warnung', () => {
+  const content = `![a](${U2}) ![b](https://example.org/foto.jpg)`
+  const r = bildquellenAufloesen({ metadata: meta({ image: U1 }), content }, ORDNER)
+  assertEquals(r.metadata.image, U1)
+  assertEquals(r.content, content)
+  assertEquals(r.warnungen, [])
+})
+
+Deno.test('bildquellenAufloesen: Cover ohne Blossom-URL und ohne passende Datei → bleibt, Warnung', () => {
+  for (const image of ['fehlt.jpg', 'https://example.org/fremd.jpg']) {
+    const r = bildquellenAufloesen({ metadata: meta({ image }), content: '' }, ORDNER)
+    assertEquals(r.metadata.image, image)
+    assertEquals(r.warnungen.length, 1, image)
+  }
+})
+
+Deno.test('bildquellenAufloesen: Eingabe wird nicht verändert', () => {
+  const metadata = meta({ image: 'foto.jpg' })
+  bildquellenAufloesen({ metadata, content: '' }, ORDNER)
+  assertEquals(metadata.image, 'foto.jpg')
 })

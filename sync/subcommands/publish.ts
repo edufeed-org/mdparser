@@ -21,6 +21,7 @@ import {
   bilddateien,
   type BilderErgebnis,
   bilderSchritt,
+  bildquellenAufloesen,
   bildUrls,
   postDirVon,
   standardDeps,
@@ -98,20 +99,28 @@ export async function processPost(file: ContentFile, deps: ProcessDeps): Promise
 
   const pubkey = deps.cfg.authorPubkeyHex
 
+  // Netz unter „Git trägt die Blossom-URLs": Dateinamen und URLs der eigenen
+  // Site, deren Datei im Ordner liegt, werden fürs Event zur Blossom-URL. Jede
+  // Ersetzung ist eine Warnung — Git muss nachgezogen werden.
+  const dateien = await bilddateien(postDirVon(file.path))
+  const { warnungen: quellenWarnungen, ...post } = bildquellenAufloesen(parsed, dateien)
+
   // Bilderschritt: Blossom spiegelt Git. Zu jeder Hash-URL Blob sicherstellen und
-  // den Nachweis aus dem # bilder-Block prägen. Warnungen halten das 30023 nicht
-  // auf — die URL steht schon in Git, Git ist die Wahrheit.
+  // den Nachweis aus dem # bilder-Block prägen. Warnungen halten das 30023 nicht auf.
   let bilder: BilderErgebnis | undefined
-  if (bildUrls(parsed.metadata, parsed.content).length > 0) {
-    const dateien = await bilddateien(postDirVon(file.path))
-    bilder = await bilderSchritt(parsed, dateien, standardDeps(deps.signer, pubkey, deps.dryRun))
+  if (bildUrls(post.metadata, post.content).length > 0) {
+    bilder = await bilderSchritt(post, dateien, standardDeps(deps.signer, pubkey, deps.dryRun))
+  }
+  if (quellenWarnungen.length > 0) {
+    bilder = bilder ?? { hochgeladen: [], nachweise: [], unveraendert: [], warnungen: [] }
+    bilder.warnungen.unshift(...quellenWarnungen)
   }
 
-  const article = buildArticleEvent(parsed.metadata, parsed.content, pubkey, AMB_HINT_RELAY, {
+  const article = buildArticleEvent(post.metadata, post.content, pubkey, AMB_HINT_RELAY, {
     seite: file.type === 'page',
   })
-  const amb = parsed.metadata.type === 'LearningResource'
-    ? buildAmbEvent(parsed.metadata, pubkey, ARTICLE_HINT_RELAY)
+  const amb = post.metadata.type === 'LearningResource'
+    ? buildAmbEvent(post.metadata, pubkey, ARTICLE_HINT_RELAY)
     : null
 
   // Kein 30142 ohne type: Liegt zu diesem Beitrag noch ein AMB-Event auf dem
