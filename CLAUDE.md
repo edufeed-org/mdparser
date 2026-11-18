@@ -121,6 +121,12 @@ Sieben **Pflichtfelder** in `commonMetadata`: `id`, `name`, `description`, `lice
 publiziert und als `missingRecommended` gemeldet. Grund: 74 von 93 Dateien hatten kein
 `keywords` — als Pflichtfeld hat es den Großteil des Archivs blockiert.
 
+**Urheber mit Nostr-Konto:** Trägt ein `creator`-Eintrag `id: nostr:npub1…` (oder
+`nostr:nprofile1…`), bleibt der `creator:*`-Lauf mit dem genannten Namen, `creator:id`
+wird zur npub-Form und ein `["p", <hex>, "", "creator"]` kommt als Begleit-Tag dazu
+(NIP-AMB, Provenance). Darüber findet edufeed den Beitrag im Profil der Person. Die
+Urheber-Tags stehen im 30142 und im 30023. Eine id je Person: Nostr-id oder ORCID.
+
 Ein Run schreibt eine Job-Summary (`core/summary.ts`) nach `GITHUB_STEP_SUMMARY`. Wurden
 Dateien geändert, aber nichts publiziert, steht dort eine Warnung — dieser Fall lief
 vorher still grün durch. Der Exit-Code bleibt bewusst 0.

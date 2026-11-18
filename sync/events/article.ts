@@ -1,5 +1,6 @@
 import type { CommonMetadata } from '../core/parser.ts'
 import { extractSlug } from '../core/parser.ts'
+import { creatorTags } from './amb.ts'
 
 export interface UnsignedEvent {
   kind: number
@@ -129,6 +130,9 @@ export function buildArticleEvent(
   if (metadata.keywords) {
     for (const kw of metadata.keywords) tags.push(['t', kw])
   }
+
+  // Urheber wie im 30142: edufeed zeigt und verlinkt sie auch am Artikel.
+  tags.push(...creatorTags(metadata.creator))
 
   // Übersetzungen (community-hub ADR-0033): schema.org workTranslation (dieser
   // Text hat eine Übersetzung) und translationOfWork (dieser Text ist eine)
