@@ -1,6 +1,41 @@
-import type { CommonMetadata } from '../core/parser.ts'
+import { nip19 } from 'nostr-tools'
+import type { CommonMetadata, Creator } from '../core/parser.ts'
 import { extractSlug } from '../core/parser.ts'
 import type { UnsignedEvent } from './article.ts'
+
+/** Hex-Pubkey einer `nostr:npub…`/`nostr:nprofile…`-id, sonst null. */
+function nostrPubkey(id: string | undefined): string | null {
+  if (!id || !/^nostr:/i.test(id)) return null
+  try {
+    const d = nip19.decode(id.slice(6))
+    if (d.type === 'npub') return d.data
+    if (d.type === 'nprofile') return d.data.pubkey
+  } catch { /* keine gültige Nostr-id: bleibt eine gewöhnliche URI */ }
+  return null
+}
+
+/**
+ * Urheber als creator:*-Lauf. Steht im Front Matter eine Nostr-id, bleibt der
+ * Lauf (der genannte Name ist die Nennung) und ein p-Tag kommt als Begleiter
+ * dazu, damit Relays die Nennung finden (NIP-AMB, Provenance).
+ */
+export function creatorTags(creators: Creator[] | undefined): string[][] {
+  const tags: string[][] = []
+  for (const creator of creators ?? []) {
+    const hex = nostrPubkey(creator.id)
+    tags.push(['creator:name', `${creator.givenName} ${creator.familyName}`])
+    if (creator.type) tags.push(['creator:type', creator.type])
+    if (creator.id) tags.push(['creator:id', hex ? `nostr:${nip19.npubEncode(hex)}` : creator.id])
+    if (creator.affiliation) {
+      tags.push(['creator:affiliation:name', creator.affiliation.name])
+      if (creator.affiliation.id) {
+        tags.push(['creator:affiliation:id', creator.affiliation.id])
+      }
+    }
+    if (hex) tags.push(['p', hex, '', 'creator'])
+  }
+  return tags
+}
 
 export function buildAmbEvent(
   metadata: CommonMetadata,
@@ -18,19 +53,7 @@ export function buildAmbEvent(
 
   if (metadata.license) tags.push(['license:id', metadata.license])
 
-  if (metadata.creator) {
-    for (const creator of metadata.creator) {
-      tags.push(['creator:name', `${creator.givenName} ${creator.familyName}`])
-      if (creator.type) tags.push(['creator:type', creator.type])
-      if (creator.id) tags.push(['creator:id', creator.id])
-      if (creator.affiliation) {
-        tags.push(['creator:affiliation:name', creator.affiliation.name])
-        if (creator.affiliation.id) {
-          tags.push(['creator:affiliation:id', creator.affiliation.id])
-        }
-      }
-    }
-  }
+  tags.push(...creatorTags(metadata.creator))
 
   if (metadata.inLanguage) {
     for (const lang of metadata.inLanguage) tags.push(['inLanguage', lang])
